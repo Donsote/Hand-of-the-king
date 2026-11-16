@@ -1,0 +1,2177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hand of the King - La Mano del Rey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b090e;
+            color: #e7dcc8;
+            font-family: 'Crimson Pro', Georgia, serif;
+            touch-action: none;
+        }
+
+        .font-gothic {
+            font-family: 'Cinzel', serif;
+        }
+
+        .font-mono-reigns {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* Marco exterior móvil oscuro estilo vitral */
+        .game-shell {
+            background: radial-gradient(circle at 50% 24%, #1f1b29 0%, #110e17 65%, #09070c 100%);
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+        }
+
+        /* Rellenado suave de los 4 símbolos superiores */
+        .stat-fill-rect {
+            transition: y 0.35s cubic-bezier(0.22, 1, 0.36, 1), height 0.35s cubic-bezier(0.22, 1, 0.36, 1), fill 0.25s ease;
+        }
+
+        /* Rombos de previsualización de impacto al arrastrar */
+        .impact-dot {
+            width: 0px;
+            height: 0px;
+            border-radius: 9999px;
+            background-color: #f5ebd6;
+            opacity: 0;
+            transition: all 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 0 8px rgba(245, 235, 214, 0.9);
+        }
+
+        .impact-dot.small {
+            width: 6px;
+            height: 6px;
+            opacity: 0.95;
+        }
+
+        .impact-dot.large {
+            width: 11px;
+            height: 11px;
+            opacity: 1;
+            background-color: #fbbf24;
+            box-shadow: 0 0 12px rgba(251, 191, 36, 1);
+        }
+
+        /* Sombra y perspectiva 3D de la carta */
+        .card-perspective {
+            perspective: 1200px;
+        }
+
+        .reigns-card {
+            transform-style: preserve-3d;
+            will-change: transform;
+            box-shadow:
+                0 22px 45px rgba(0, 0, 0, 0.8),
+                0 0 0 3px #3b3226,
+                inset 0 0 0 2px rgba(251, 191, 36, 0.22);
+        }
+
+        /* Brillo diagonal tipo cristal en las cartas */
+        .stained-glass-sheen {
+            background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.3) 100%);
+            pointer-events: none;
+        }
+
+        /* Cuadritos de Posponer en esquina inferior derecha */
+        .postpone-pip {
+            width: 11px;
+            height: 11px;
+            border-radius: 2px;
+            background-color: #262130;
+            border: 1px solid #3f374d;
+            transition: all 0.25s ease;
+        }
+
+        .postpone-pip.active {
+            background-color: #d4af37;
+            border-color: #fef08a;
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.55);
+        }
+
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-7px) rotate(1deg); }
+        }
+
+        .float-emblem {
+            animation: floatSlow 3.8s ease-in-out infinite;
+        }
+
+        @keyframes cardDealIn {
+            0% { transform: scale(0.76) translateY(35px); opacity: 0; }
+            100% { transform: scale(1) translateY(0px); opacity: 1; }
+        }
+
+        .card-deal-anim {
+            animation: cardDealIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        @keyframes skullPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.12); }
+        }
+
+        .skull-pulse {
+            animation: skullPulse 1.8s ease-in-out infinite;
+        }
+
+        /* Scrollbar personalizada para la Bitácora de 50 Logros */
+        .logbook-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+        .logbook-scroll::-webkit-scrollbar-track {
+            background: #121017;
+        }
+        .logbook-scroll::-webkit-scrollbar-thumb {
+            background: #3b354a;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center w-full h-full select-none">
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="game-shell relative w-full max-w-[430px] h-full max-h-[920px] flex flex-col justify-between overflow-hidden sm:rounded-[34px] sm:border sm:border-[#2e2838]">
+
+        <!-- ========================================================= -->
+        <!-- NOTIFICACIÓN EMERGENTE DE LOGRO DESBLOQUEADO              -->
+        <!-- ========================================================= -->
+        <div id="achievement-toast" class="pointer-events-none fixed top-4 left-1/2 -translate-x-1/2 z-[80] w-[90%] max-w-[360px] bg-[#181420]/95 border border-[#d4af37]/70 rounded-xl px-4 py-2.5 shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 -translate-y-6">
+            <div class="w-8 h-8 rounded-lg bg-[#d4af37]/20 border border-[#d4af37] flex items-center justify-center shrink-0 text-[#fbbf24] font-gothic text-sm">
+                ★
+            </div>
+            <div class="flex flex-col min-w-0">
+                <span id="toast-label" class="font-mono-reigns text-[10px] uppercase tracking-widest text-[#d4af37]">
+                    ACHIEVEMENT UNLOCKED
+                </span>
+                <span id="toast-title" class="font-gothic text-xs font-bold text-[#f5ebd6] truncate">
+                    ...
+                </span>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 1. PANTALLA DE INICIO (PORTADA ANIMADA + IDIOMA + LOGBOOK)-->
+        <!-- ========================================================= -->
+        <div id="title-screen" class="absolute inset-0 z-50 bg-[#0d0b12] flex flex-col justify-between items-center p-7 transition-opacity duration-500">
+            
+            <!-- Barra superior: Bitácora a la izquierda e Idioma a la derecha -->
+            <div class="w-full flex justify-between items-center pt-2">
+                <button id="logbook-btn-title" class="px-3 py-1.5 rounded-full border border-[#3a3247] bg-[#171421] text-xs font-mono-reigns tracking-widest text-[#d4af37] active:scale-95 transition flex items-center gap-1.5">
+                    <span>★</span>
+                    <span id="title-logbook-count">0/50</span>
+                </button>
+                <button id="lang-btn-title" class="px-3.5 py-1.5 rounded-full border border-[#3a3247] bg-[#171421] text-xs font-mono-reigns tracking-widest text-[#e7dcc8] active:scale-95 transition">
+                    ES | EN
+                </button>
+            </div>
+
+            <!-- Arte central animado y Título -->
+            <div id="start-tap-area" class="flex flex-col items-center justify-center flex-1 w-full cursor-pointer">
+                <div class="float-emblem relative w-44 h-56 rounded-2xl bg-[#191522] border-2 border-[#c89d3c] shadow-2xl flex items-center justify-center overflow-hidden mb-9">
+                    <svg viewBox="0 0 200 250" class="w-full h-full">
+                        <polygon points="0,0 100,125 0,250" fill="#231c30"/>
+                        <polygon points="200,0 100,125 200,250" fill="#1b1526"/>
+                        <polygon points="0,0 200,0 100,125" fill="#3a1d28"/>
+                        <polygon points="0,250 200,250 100,125" fill="#14292b"/>
+                        <line x1="0" y1="0" x2="200" y2="250" stroke="#0b090e" stroke-width="5"/>
+                        <line x1="200" y1="0" x2="0" y2="250" stroke="#0b090e" stroke-width="5"/>
+                        <circle cx="100" cy="125" r="54" fill="#120f18" stroke="#d4af37" stroke-width="4"/>
+                        <!-- Corona Gótica -->
+                        <polygon points="68,122 64,90 85,107 100,82 115,107 136,90 132,122" fill="#f59e0b" stroke="#0b090e" stroke-width="3" stroke-linejoin="round"/>
+                        <polygon points="100,96 105,105 100,114 95,105" fill="#ef4444"/>
+                        <!-- Mano del Rey -->
+                        <path d="M90 162 L90 136 C90 133 95 133 95 136 L95 131 C95 128 100 128 100 131 L100 129 C100 126 105 126 105 129 L105 134 C105 131 110 131 110 134 L110 162 Z" fill="#e7dcc8" stroke="#0b090e" stroke-width="2.5"/>
+                    </svg>
+                    <div class="stained-glass-sheen absolute inset-0"></div>
+                </div>
+
+                <h1 id="title-main" class="font-gothic text-3xl sm:text-4xl font-extrabold text-center tracking-wider text-[#f5ebd6] mb-6 px-2">
+                    HAND OF THE KING
+                </h1>
+
+                <div class="mt-2 px-6 py-2.5 rounded-full border border-[#c89d3c]/40 bg-[#c89d3c]/10 animate-pulse">
+                    <span id="title-tap" class="font-gothic text-xs tracking-[0.25em] text-[#fbbf24] uppercase">
+                        TAP TO BEGIN
+                    </span>
+                </div>
+            </div>
+
+            <!-- Récord Histórico -->
+            <div class="w-full text-center pb-2">
+                <span id="title-best" class="font-mono-reigns text-xs tracking-widest text-[#70687d] uppercase">
+                    LONGEST TENURE: 0 MONTHS
+                </span>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 2. BARRA SUPERIOR DE 4 SÍMBOLOS GÓTICOS                   -->
+        <!-- ========================================================= -->
+        <header class="w-full pt-3 pb-1 px-8 flex justify-between items-center z-20 shrink-0">
+            
+            <!-- 1. CORONA (Ámbar Gótico) -->
+            <div class="flex flex-col items-center">
+                <div class="relative w-10 h-5 flex items-center justify-center mb-1">
+                    <div id="skull-crown" class="hidden skull-pulse text-[#e7dcc8] absolute inset-0 flex items-center justify-center">
+                        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M3 2H13V10H11V14H9V11H7V14H5V10H3V2ZM5 5H7V7H5V5ZM9 5H11V7H9V5Z"/>
+                        </svg>
+                    </div>
+                    <div id="dot-crown" class="impact-dot"></div>
+                </div>
+                <svg class="w-10 h-10 overflow-visible" viewBox="0 0 100 100">
+                    <defs>
+                        <clipPath id="clip-crown">
+                            <path d="M12 76 L8 26 L30 50 L50 16 L70 50 L92 26 L88 76 Z M14 83 L86 83 L86 93 L14 93 Z" />
+                        </clipPath>
+                    </defs>
+                    <g clip-path="url(#clip-crown)">
+                        <rect x="0" y="0" width="100" height="100" fill="#262230" />
+                        <rect id="fill-crown" class="stat-fill-rect" x="0" y="50" width="100" height="50" fill="#f59e0b" />
+                    </g>
+                </svg>
+            </div>
+
+            <!-- 2. PUEBLO (Azul Cobalto) -->
+            <div class="flex flex-col items-center">
+                <div class="relative w-10 h-5 flex items-center justify-center mb-1">
+                    <div id="skull-people" class="hidden skull-pulse text-[#e7dcc8] absolute inset-0 flex items-center justify-center">
+                        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M3 2H13V10H11V14H9V11H7V14H5V10H3V2ZM5 5H7V7H5V5ZM9 5H11V7H9V5Z"/>
+                        </svg>
+                    </div>
+                    <div id="dot-people" class="impact-dot"></div>
+                </div>
+                <svg class="w-10 h-10 overflow-visible" viewBox="0 0 100 100">
+                    <defs>
+                        <clipPath id="clip-people">
+                            <circle cx="50" cy="24" r="15" />
+                            <path d="M16 92 C16 62 31 46 50 46 C69 46 84 62 84 92 Z" />
+                        </clipPath>
+                    </defs>
+                    <g clip-path="url(#clip-people)">
+                        <rect x="0" y="0" width="100" height="100" fill="#262230" />
+                        <rect id="fill-people" class="stat-fill-rect" x="0" y="50" width="100" height="50" fill="#3b82f6" />
+                    </g>
+                </svg>
+            </div>
+
+            <!-- 3. EJÉRCITO (Rojo Carmesí) -->
+            <div class="flex flex-col items-center">
+                <div class="relative w-10 h-5 flex items-center justify-center mb-1">
+                    <div id="skull-army" class="hidden skull-pulse text-[#e7dcc8] absolute inset-0 flex items-center justify-center">
+                        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M3 2H13V10H11V14H9V11H7V14H5V10H3V2ZM5 5H7V7H5V5ZM9 5H11V7H9V5Z"/>
+                        </svg>
+                    </div>
+                    <div id="dot-army" class="impact-dot"></div>
+                </div>
+                <svg class="w-10 h-10 overflow-visible" viewBox="0 0 100 100">
+                    <defs>
+                        <clipPath id="clip-army">
+                            <path d="M50 6 L60 22 L58 60 L82 54 L86 64 L58 70 L58 84 L66 90 L50 97 L34 90 L42 84 L42 70 L14 64 L18 54 L42 60 L40 22 Z" />
+                        </clipPath>
+                    </defs>
+                    <g clip-path="url(#clip-army)">
+                        <rect x="0" y="0" width="100" height="100" fill="#262230" />
+                        <rect id="fill-army" class="stat-fill-rect" x="0" y="50" width="100" height="50" fill="#f43f5e" />
+                    </g>
+                </svg>
+            </div>
+
+            <!-- 4. TESORO / DINERO (Verde Esmeralda) -->
+            <div class="flex flex-col items-center">
+                <div class="relative w-10 h-5 flex items-center justify-center mb-1">
+                    <div id="skull-treasury" class="hidden skull-pulse text-[#e7dcc8] absolute inset-0 flex items-center justify-center">
+                        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M3 2H13V10H11V14H9V11H7V14H5V10H3V2ZM5 5H7V7H5V5ZM9 5H11V7H9V5Z"/>
+                        </svg>
+                    </div>
+                    <div id="dot-treasury" class="impact-dot"></div>
+                </div>
+                <svg class="w-10 h-10 overflow-visible" viewBox="0 0 100 100">
+                    <defs>
+                        <clipPath id="clip-treasury">
+                            <path d="M45 6 H55 V16 C69 18 78 26 78 39 H64 C64 31 58 27 50 27 C42 27 36 31 36 37 C36 43 43 45 53 48 C67 51 79 56 79 70 C79 82 69 90 55 92 V98 H45 V92 C30 90 20 81 20 68 H34 C34 76 41 80 50 80 C59 80 65 76 65 69 C65 62 58 60 46 57 C33 54 22 49 22 37 C22 25 31 18 45 16 Z" />
+                        </clipPath>
+                    </defs>
+                    <g clip-path="url(#clip-treasury)">
+                        <rect x="0" y="0" width="100" height="100" fill="#262230" />
+                        <rect id="fill-treasury" class="stat-fill-rect" x="0" y="50" width="100" height="50" fill="#10b981" />
+                    </g>
+                </svg>
+            </div>
+
+        </header>
+
+        <!-- ========================================================= -->
+        <!-- 3. ÁREA CENTRAL: TEXTO + CARTA VITRAL + NOMBRE            -->
+        <!-- ========================================================= -->
+        <main class="flex-1 flex flex-col items-center justify-between px-6 py-1 z-10 min-h-0">
+            
+            <!-- Diálogo de la carta -->
+            <div class="w-full min-h-[82px] flex items-center justify-center text-center px-2">
+                <p id="card-dialogue" class="text-[19px] sm:text-[21px] leading-snug text-[#f3ead8] font-normal transition-opacity duration-200">
+                    ...
+                </p>
+            </div>
+
+            <!-- Mazo y Carta Activa -->
+            <div class="card-perspective relative w-[275px] h-[340px] sm:w-[295px] sm:h-[365px] flex items-center justify-center my-auto">
+                
+                <!-- Sombra del mazo debajo -->
+                <div class="absolute inset-0 rounded-[22px] bg-[#16131d] border-2 border-[#2c2538] translate-y-2 scale-[0.96] opacity-75 pointer-events-none"></div>
+                <div class="absolute inset-0 rounded-[22px] bg-[#120f18] border-2 border-[#231d2e] translate-y-4 scale-[0.92] opacity-45 pointer-events-none"></div>
+
+                <!-- Carta Interactiva -->
+                <div id="active-card" class="reigns-card relative w-full h-full rounded-[22px] bg-[#1b1724] overflow-hidden cursor-grab active:cursor-grabbing flex flex-col">
+                    
+                    <!-- Retrato SVG en Vitral -->
+                    <div id="card-art" class="relative w-full h-full flex items-center justify-center overflow-hidden"></div>
+
+                    <!-- Brillo de vitral -->
+                    <div class="stained-glass-sheen absolute inset-0"></div>
+
+                    <!-- Etiqueta sutil de respuesta al deslizar -->
+                    <div id="swipe-banner" class="absolute inset-x-0 top-5 flex justify-center pointer-events-none opacity-0 transition-opacity duration-100 px-3">
+                        <span id="swipe-banner-text" class="font-gothic text-xs sm:text-sm font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-lg bg-[#0b090e]/90 text-[#f5ebd6] border border-[#d4af37]/60 shadow-lg text-center">
+                            ...
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nombre del Personaje -->
+            <div class="w-full py-2 text-center">
+                <span id="speaker-name" class="font-mono-reigns text-base sm:text-lg tracking-wider text-[#d6c7b2]">
+                    King Raul
+                </span>
+            </div>
+
+        </main>
+
+        <!-- ========================================================= -->
+        <!-- 4. PIE DE PÁGINA LIMPIO ESTILO REIGNS                     -->
+        <!-- ========================================================= -->
+        <footer class="w-full px-7 pt-1 pb-11 flex justify-between items-end z-20 shrink-0">
+            
+            <div class="flex flex-col">
+                <span id="footer-hand-name" class="font-mono-reigns text-sm text-[#c7baa5] tracking-wider">
+                    Lord Vane
+                </span>
+                <div class="flex items-baseline gap-1.5 mt-0.5">
+                    <span id="footer-tenure" class="font-mono-reigns text-base sm:text-lg text-[#f5ebd6] whitespace-nowrap">
+                        0 months in power
+                    </span>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-end">
+                <span id="footer-year" class="font-mono-reigns text-2xl sm:text-3xl text-[#f5ebd6] leading-none">
+                    1142
+                </span>
+                <div class="flex items-center gap-1.5 mt-2" title="Swipe Up to Postpone">
+                    <div id="pip-1" class="postpone-pip active"></div>
+                    <div id="pip-2" class="postpone-pip active"></div>
+                    <div id="pip-3" class="postpone-pip active"></div>
+                </div>
+            </div>
+
+        </footer>
+
+        <!-- ========================================================= -->
+        <!-- 5. PANTALLA DE SUCESIÓN Y LÍNEA DE TIEMPO ANIMADA         -->
+        <!-- ========================================================= -->
+        <div id="succession-screen" class="hidden absolute inset-0 z-50 bg-[#120e16] flex flex-col justify-between items-center py-8 px-6 cursor-pointer">
+            
+            <!-- Íconos decorativos superiores + Botón de Bitácora (50 Logros) -->
+            <div class="w-full flex justify-between items-center px-2 pt-2">
+                <div class="text-[#e11d48] opacity-80">
+                    <!-- Icono Castillo Gótico -->
+                    <svg class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2 22h20V9h-3v2h-2V9h-3v4h-4V9H7v2H5V9H2v13zm6-19v4h2V5h4v2h2V3h-2v1h-4V3H8zm2 13h4v6h-4v-6z"/>
+                    </svg>
+                </div>
+
+                <!-- Botón Interactivo de Bitácora Real (50 Logros) -->
+                <button id="logbook-btn-succession" class="flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl bg-[#1d1724] border border-[#e11d48]/50 text-[#e11d48] active:scale-95 transition shadow-lg">
+                    <div class="flex items-center gap-1.5">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h6v14h2V5h6v14z"/>
+                        </svg>
+                        <span id="succession-logbook-text" class="font-mono-reigns text-xs tracking-wider uppercase text-[#f5ebd6]">
+                            LOGBOOK (0/50)
+                        </span>
+                    </div>
+                </button>
+
+                <!-- Botón Idioma en Sucesión -->
+                <button id="lang-btn-succession" class="px-2.5 py-1 rounded border border-[#3a3247] bg-[#1a1523] text-[10px] font-mono-reigns text-[#c7baa5]">
+                    ES | EN
+                </button>
+            </div>
+
+            <!-- FASE 1: "THE HAND HAS FALLEN" / "LA MANO HA CAÍDO" -->
+            <div id="succ-phase-1" class="flex-1 w-full flex flex-col justify-between items-center my-6">
+                <div class="flex-1 flex flex-col justify-center items-center text-center">
+                    <span id="fallen-top" class="font-mono-reigns text-2xl sm:text-3xl text-[#f5ebd6] tracking-wider mb-1">
+                        The
+                    </span>
+                    <span id="fallen-mid" class="font-mono-reigns text-6xl sm:text-7xl text-[#f5ebd6] tracking-widest uppercase my-1">
+                        Hand
+                    </span>
+                    <span id="fallen-bot" class="font-mono-reigns text-2xl sm:text-3xl text-[#f5ebd6] tracking-wider mt-1">
+                        has fallen
+                    </span>
+                </div>
+
+                <!-- Banda negra inferior con calavera, nombre y años vividos -->
+                <div class="w-full bg-[#07050a] py-6 px-6 rounded-xl flex items-center justify-between border border-[#241e2e]">
+                    <div class="flex-1 flex flex-col items-center text-center">
+                        <!-- Calavera pixel/gótica -->
+                        <svg class="w-6 h-6 text-[#9a8c73] mb-3" viewBox="0 0 16 16" fill="currentColor">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M3 2H13V10H11V14H9V11H7V14H5V10H3V2ZM5 5H7V7H5V5ZM9 5H11V7H9V5Z"/>
+                        </svg>
+                        <span id="fallen-name" class="font-mono-reigns text-xl text-[#f5ebd6] tracking-widest mb-1">
+                            Lord Vane
+                        </span>
+                        <span id="fallen-years" class="font-mono-reigns text-sm text-[#c7baa5] tracking-widest">
+                            1142 - 1148
+                        </span>
+                    </div>
+                    <div class="w-9 h-9 rounded-full bg-[#262130] border border-[#4a415a] flex items-center justify-center text-[#10b981]">
+                        <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FASE 2: LÍNEA DE TIEMPO ANIMADA Y NUEVA MANO -->
+            <div id="succ-phase-2" class="hidden flex-1 w-full flex flex-col justify-between items-center my-6">
+                
+                <!-- Línea de tiempo central -->
+                <div class="flex-1 w-full flex flex-col justify-center items-center relative">
+                    
+                    <!-- Año actual de inicio del nuevo mandato (Animado) -->
+                    <span id="timeline-new-year" class="font-mono-reigns text-5xl sm:text-6xl text-[#d6c7b2] tracking-widest mb-2">
+                        1149
+                    </span>
+                    
+                    <!-- Línea vertical conectora -->
+                    <div class="w-[2px] h-16 bg-[#9a8c73]"></div>
+
+                    <!-- Barra horizontal de Línea de Tiempo Animada -->
+                    <div class="w-full h-4 bg-[#231d29] relative flex items-center overflow-hidden rounded-sm">
+                        <!-- Tramo anterior -->
+                        <div class="h-3 bg-[#9a8c73] w-[14%] opacity-50"></div>
+                        <div class="w-[2%] h-3"></div>
+                        <!-- Tramo recién vivido (Crece con transición CSS) -->
+                        <div id="timeline-lived-bar" class="h-3 bg-[#d6c7b2] w-0 transition-all duration-700 ease-out"></div>
+                        <!-- Marcador rojo de inicio de la nueva Mano -->
+                        <div id="timeline-red-dot" class="w-4 h-4 bg-[#e11d48] shrink-0 shadow-[0_0_12px_#e11d48] scale-0 transition-transform duration-500"></div>
+                    </div>
+
+                    <!-- Nombre de la Nueva Mano y Número de Sucesión -->
+                    <div class="mt-4 flex flex-col items-center">
+                        <span id="timeline-successor-name" class="font-mono-reigns text-2xl sm:text-3xl text-[#d6c7b2] tracking-wider">
+                            Lord Cassian
+                        </span>
+                        <span id="timeline-successor-ordinal" class="font-mono-reigns text-sm text-[#9a8c73] tracking-widest mt-0.5">
+                            2nd Hand • Under King Raul
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Banda inferior con el decreto del Rey actual -->
+                <div class="w-full bg-[#07050a] py-5 px-5 rounded-xl flex items-center justify-between border border-[#241e2e]">
+                    <div class="flex flex-col pr-3">
+                        <span id="timeline-king-note" class="font-mono-reigns text-xs sm:text-sm text-[#c7baa5] leading-relaxed">
+                            King Raul appointed a new Hand to restore order in the realm.
+                        </span>
+                    </div>
+                    <div class="w-9 h-9 shrink-0 rounded-full bg-[#262130] border border-[#4a415a] flex items-center justify-center text-[#10b981]">
+                        <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 6. MODAL DE BITÁCORA REAL (50 LOGROS)                     -->
+        <!-- ========================================================= -->
+        <div id="logbook-modal" class="hidden absolute inset-0 z-[70] bg-[#0c0912]/98 flex flex-col justify-between p-6">
+            
+            <!-- Cabecera del Modal -->
+            <div class="w-full flex justify-between items-center pb-4 border-b border-[#2b2438]">
+                <div>
+                    <h2 id="logbook-modal-title" class="font-gothic text-xl font-bold text-[#f5ebd6] tracking-wider">
+                        ROYAL LOGBOOK
+                    </h2>
+                    <p id="logbook-modal-subtitle" class="font-mono-reigns text-xs text-[#d4af37] tracking-widest mt-0.5">
+                        ACHIEVEMENTS UNLOCKED: 0 / 50 (0%)
+                    </p>
+                </div>
+                <button id="close-logbook-btn" class="w-9 h-9 rounded-full bg-[#1e1929] border border-[#3f3652] text-[#e7dcc8] flex items-center justify-center text-lg active:scale-95">
+                    ×
+                </button>
+            </div>
+
+            <!-- Barra de progreso general -->
+            <div class="w-full h-2 bg-[#1c1726] rounded-full overflow-hidden my-3 border border-[#2e263d]">
+                <div id="logbook-progress-bar" class="h-full bg-gradient-to-r from-[#d4af37] to-[#10b981] w-0 transition-all duration-500"></div>
+            </div>
+
+            <!-- Lista desplazable de los 50 Logros -->
+            <div id="logbook-list" class="logbook-scroll flex-1 overflow-y-auto space-y-2.5 pr-1 my-1"></div>
+
+            <!-- Pie del Modal -->
+            <div class="w-full pt-3 border-t border-[#2b2438] text-center">
+                <button id="close-logbook-bottom" class="w-full py-2.5 rounded-xl bg-[#231d30] border border-[#4a3e63] font-gothic text-xs tracking-widest text-[#f5ebd6] uppercase active:scale-98">
+                    CLOSE LOGBOOK
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- LÓGICA DEL JUEGO, REY RAUL, MUERTES Y 50 LOGROS EXIGENTES -->
+    <!-- ========================================================= -->
+    <script>
+        // --- 1. CONFIGURACIÓN DE IDIOMA (INGLÉS POR DEFECTO) ---
+        let lang = localStorage.getItem('kings_hand_lang_v6') || 'en';
+
+        const I18N = {
+            en: {
+                titleMain: "HAND OF THE KING",
+                titleTap: "TAP TO BEGIN",
+                longestTenure: "LONGEST TENURE",
+                inPower: "in power",
+                month: "month",
+                months: "months",
+                year: "year",
+                years: "years",
+                andHalf: "and 6m",
+                postponeBanner: "POSTPONE",
+                continueBanner: "CONTINUE",
+                theWord: "The",
+                handWord: "Hand",
+                hasFallenWord: "has fallen",
+                underKing: "Under",
+                kingAppointed: (king) => `${king} appointed a new Hand to restore order in the realm.`,
+                ordinals: ["1st Hand", "2nd Hand", "3rd Hand", "4th Hand", "5th Hand", "6th Hand", "7th Hand", "8th Hand", "9th Hand", "10th Hand"],
+                nthHand: (n) => `${n}th Hand`,
+                logbookBtn: (u) => `LOGBOOK (${u}/50)`,
+                logbookTitle: "ROYAL LOGBOOK",
+                logbookSubtitle: (u, pct) => `ACHIEVEMENTS UNLOCKED: ${u} / 50 (${pct}%)`,
+                logbookClose: "CLOSE LOGBOOK",
+                toastUnlocked: "ACHIEVEMENT UNLOCKED"
+            },
+            es: {
+                titleMain: "LA MANO DEL REY",
+                titleTap: "TOCAR PARA EMPEZAR",
+                longestTenure: "MEJOR MANDATO",
+                inPower: "en el cargo",
+                month: "mes",
+                months: "meses",
+                year: "año",
+                years: "años",
+                andHalf: "y 6 m",
+                postponeBanner: "POSPONER",
+                continueBanner: "CONTINUAR",
+                theWord: "La",
+                handWord: "Mano",
+                hasFallenWord: "ha caído",
+                underKing: "Bajo el",
+                kingAppointed: (king) => `El ${king} nombró a una nueva Mano para restaurar el orden.`,
+                ordinals: ["1ª Mano", "2ª Mano", "3ª Mano", "4ª Mano", "5ª Mano", "6ª Mano", "7ª Mano", "8ª Mano", "9ª Mano", "10ª Mano"],
+                nthHand: (n) => `${n}ª Mano`,
+                logbookBtn: (u) => `BITÁCORA (${u}/50)`,
+                logbookTitle: "BITÁCORA REAL",
+                logbookSubtitle: (u, pct) => `LOGROS DESBLOQUEADOS: ${u} / 50 (${pct}%)`,
+                logbookClose: "CERRAR BITÁCORA",
+                toastUnlocked: "LOGRO DESBLOQUEADO"
+            }
+        };
+
+        // --- 2. CATÁLOGO DE 50 LOGROS EXIGENTES (SIN SPAM AL INICIO) ---
+        const ACHIEVEMENTS = [
+            // Muertes por Extremos (1 - 8)
+            { id: "death_crown_low", en: ["King's Wrath", "Executed for exhausting the Monarch's patience."], es: ["Ira del Rey", "Ejecutado por agotar la paciencia del Monarca."] },
+            { id: "death_crown_high", en: ["Puppet of the Throne", "Turned into the Royal Jester for excessive flattery."], es: ["Títere del Trono", "Convertido en Bufón Real por adular demasiado al Rey."] },
+            { id: "death_people_low", en: ["Pitchforks & Torches", "Torn apart by a starving peasant uprising."], es: ["Horcas y Antorchas", "Despedazado por una rebelión de campesinos hambrientos."] },
+            { id: "death_people_high", en: ["Saint Martyr", "Cut into pieces by fanatics to make holy relics."], es: ["Santo Mártir", "Cortado en pedacitos por fanáticos para hacer reliquias."] },
+            { id: "death_army_low", en: ["Fallen Bastion", "Invaded by barbarians with no soldiers left to defend."], es: ["Bastión Caído", "Invadido por bárbaros sin soldados para defenderte."] },
+            { id: "death_army_high", en: ["Military Junta", "Overthrown and imprisoned by your own General."], es: ["Junta Militar", "Derrocado y encerrado por tu propio General."] },
+            { id: "death_treasury_low", en: ["Sold to Creditors", "Bankrupted the realm and sold into slavery."], es: ["Vendido a Acreedores", "Quebraste el reino y fuiste vendido como esclavo."] },
+            { id: "death_treasury_high", en: ["Drowned in Gold", "Poisoned at a banquet by greedy nobles."], es: ["Ahogado en Oro", "Envenenado en un banquete por nobles codiciosos."] },
+
+            // Supervivencia en una sola vida (9 - 16)
+            { id: "survive_5y", en: ["Seasoned Councilor", "Survive 5 years in a single tenure."], es: ["Consejero Curtido", "Sobrevive 5 años en un mismo mandato."] },
+            { id: "survive_10y", en: ["Decade of Shadows", "Survive 10 years in a single tenure."], es: ["Década de Sombras", "Sobrevive 10 años en un mismo mandato."] },
+            { id: "survive_15y", en: ["Silver Seal", "Survive 15 years in a single tenure."], es: ["Sello de Plata", "Sobrevive 15 años en un mismo mandato."] },
+            { id: "survive_20y", en: ["Golden Minister", "Survive 20 years in a single tenure."], es: ["Ministro Dorado", "Sobrevive 20 años en un mismo mandato."] },
+            { id: "survive_25y", en: ["Quarter Century", "Survive 25 years in a single tenure."], es: ["Cuarto de Siglo", "Sobrevive 25 años en un mismo mandato."] },
+            { id: "survive_30y", en: ["Immortal Hand", "Survive 30 years in a single tenure."], es: ["Mano Inmortal", "Sobrevive 30 años en un mismo mandato."] },
+            { id: "survive_40y", en: ["Living Legend", "Survive 40 years in a single tenure."], es: ["Leyenda Viviente", "Sobrevive 40 años en un mismo mandato."] },
+            { id: "survive_50y", en: ["Half-Century Master", "Survive 50 years in a single tenure."], es: ["Maestro del Medio Siglo", "Sobrevive 50 años en un mismo mandato."] },
+
+            // Dinastía de Manos y Sucesiones de Reyes (17 - 24)
+            { id: "hand_3", en: ["Third Lineage", "Reach the 3rd Hand of the dynasty."], es: ["Tercer Linaje", "Llega a la 3ª Mano de la dinastía."] },
+            { id: "hand_5", en: ["Fifth Lineage", "Reach the 5th Hand of the dynasty."], es: ["Quinto Linaje", "Llega a la 5ª Mano de la dinastía."] },
+            { id: "hand_10", en: ["Graveyard of Hands", "Reach the 10th Hand of the dynasty."], es: ["Cementerio de Manos", "Llega a la 10ª Mano de la dinastía."] },
+            { id: "king_raul_dies", en: ["Long Live the King", "Outlive King Raul while serving as Hand."], es: ["Viva el Rey", "Sobrevive a la muerte del Rey Raul siendo su Mano."] },
+            { id: "king_3", en: ["Power Behind Thrones", "Serve under 3 different Kings."], es: ["Poder Tras el Trono", "Sirve bajo el mando de 3 Reyes distintos."] },
+            { id: "king_5", en: ["Eternal Whisperer", "Serve under 5 different Kings."], es: ["Susurrador Eterno", "Sirve bajo el mando de 5 Reyes distintos."] },
+            { id: "year_1200", en: ["The 13th Century", "Advance the realm timeline to the year 1200."], es: ["El Siglo XIII", "Avanza el calendario del reino hasta el año 1200."] },
+            { id: "year_1250", en: ["New Era of Valen", "Advance the realm timeline to the year 1250."], es: ["Nueva Era de Valen", "Avanza el calendario del reino hasta el año 1250."] },
+
+            // Uso Táctico de Posponer (25 - 30)
+            { id: "postpone_empty", en: ["Desk Overloaded", "Spend all 3 Postpone charges in one life."], es: ["Escritorio Colapsado", "Gasta tus 3 cargas de Posponer en una misma vida."] },
+            { id: "postpone_10", en: ["Master of Delays", "Postpone 10 petitions across your career."], es: ["Maestro de la Demora", "Pospón 10 peticiones a lo largo de tu carrera."] },
+            { id: "postpone_25", en: ["Bureaucratic Nightmare", "Postpone 25 petitions across your career."], es: ["Pesadilla Burocrática", "Pospón 25 peticiones a lo largo de tu carrera."] },
+            { id: "no_postpone_10y", en: ["Decisive Ruler", "Survive 10 years without postponing a single card."], es: ["Gobernante Decisivo", "Sobrevive 10 años sin posponer ni una sola carta."] },
+            { id: "no_postpone_20y", en: ["Iron Judgment", "Survive 20 years without postponing a single card."], es: ["Juicio de Hierro", "Sobrevive 20 años sin posponer ni una sola carta."] },
+            { id: "postpone_refill", en: ["Clean Slate", "Recover a Postpone charge from a royal counselor."], es: ["Bandeja Limpia", "Recupera una carga de Posponer gracias a un consejero."] },
+
+            // Equilibrio y Situaciones Límite (31 - 38)
+            { id: "perfect_harmony", en: ["Golden Equilibrium", "Keep all 4 factions between 45% and 55% after 5+ years."], es: ["Equilibrio Dorado", "Mantén las 4 facciones entre 45% y 55% tras 5+ años."] },
+            { id: "brink_low", en: ["Edge of the Abyss", "Survive a turn with any faction at 5% or less."], es: ["Al Borde del Abismo", "Sobrevive un turno con una facción al 5% o menos."] },
+            { id: "brink_high", en: ["Playing with Fire", "Survive a turn with any faction at 95% or more."], es: ["Jugando con Fuego", "Sobrevive un turno con una facción al 95% o más."] },
+            { id: "comeback_kid", en: ["Miracle Recovery", "Raise a faction from under 10% back to 50%."], es: ["Recuperación Milagrosa", "Sube una facción desde menos del 10% hasta el 50%."] },
+            { id: "Yes_man", en: ["Always Approve", "Swipe Right 8 times in a row during a mandate."], es: ["Todo que Sí", "Desliza a la derecha 8 veces seguidas en un mandato."] },
+            { id: "iron_veto", en: ["Lord of Vetoes", "Swipe Left 8 times in a row during a mandate."], es: ["Señor del Veto", "Desliza a la izquierda 8 veces seguidas en un mandato."] },
+            { id: "short_reign", en: ["Briefest Mandate", "Die in less than 2 years in power."], es: ["Mandato Fugaz", "Muere en menos de 2 años en el cargo."] },
+            { id: "all_deaths", en: ["Collector of Dooms", "Experience all 8 different causes of death."], es: ["Coleccionista de Muertes", "Experimenta las 8 causas de muerte distintas."] },
+
+            // Eventos y Decisiones de Historia (39 - 50)
+            { id: "ev_save_king_wine", en: ["Loyal Taster", "Warn the King about the poisoned wine."], es: ["Catador Leal", "Advierte al Rey sobre el vino envenenado."] },
+            { id: "ev_hide_poison", en: ["Silent Conspiracy", "Hide the truth about the poisoned cupbearer."], es: ["Conspiración Silenciosa", "Oculta la verdad sobre el copero envenenado."] },
+            { id: "ev_pay_mercenaries", en: ["Gold for Steel", "Pay the mercenaries to prevent a sack."], es: ["Oro por Acero", "Paga a los mercenarios para evitar el saqueo."] },
+            { id: "ev_crush_mercenaries", en: ["No Negotiation", "Refuse to pay the mercenaries at the gates."], es: ["Sin Negociación", "Niégate a pagar a los mercenarios en las puertas."] },
+            { id: "ev_open_granaries", en: ["Merciful Hand", "Open the Royal Granaries during the winter frost."], es: ["Mano Piadosa", "Abre los graneros reales durante la helada de invierno."] },
+            { id: "ev_starve_winter", en: ["Cold Heart", "Keep the granaries locked during the winter frost."], es: ["Corazón Helado", "Mantén cerrados los graneros durante el invierno."] },
+            { id: "ev_fund_alchemy", en: ["Fool's Gold", "Fund Seraphina's alchemical gold experiment."], es: ["Oro de los Tontos", "Financia el experimento alquímico de Seraphina."] },
+            { id: "ev_build_cathedral", en: ["Gothic Splendor", "Force the people to pay for stained glass windows."], es: ["Esplendor Gótico", "Obliga al pueblo a pagar los vitrales de la catedral."] },
+            { id: "ev_tax_nobles", en: ["Silk Tax", "Tax the luxury banquets of the nobility."], es: ["Impuesto a la Seda", "Cobra impuestos a los banquetes de la nobleza."] },
+            { id: "ev_burn_archives", en: ["Ashes of Bureaucracy", "Burn the old archives to clear your desk."], es: ["Cenizas Burocráticas", "Quema los archivos viejos para limpiar tu escritorio."] },
+            { id: "ev_dragon_expedition", en: ["Dragon Slayer", "Send the army to hunt the dragon in the mountains."], es: ["Cazador de Dragones", "Envía al ejército a cazar al dragón en las montañas."] },
+            { id: "ev_quarantine_plague", en: ["Iron Quarantine", "Seal the southern port during the red fever."], es: ["Cuarentena de Hierro", "Cierra el puerto del sur durante la fiebre roja."] }
+        ];
+
+        let unlockedSet = new Set(JSON.parse(localStorage.getItem('kings_hand_ach_v6') || '[]'));
+        let totalPostponesEver = parseInt(localStorage.getItem('kings_hand_postpones_v6') || '0', 10);
+
+        // Cola de notificaciones para evitar que salten logros seguidos
+        let toastQueue = [];
+        let toastBusy = false;
+
+        function unlockAchievement(id) {
+            if (unlockedSet.has(id)) return;
+            const ach = ACHIEVEMENTS.find(a => a.id === id);
+            if (!ach) return;
+
+            unlockedSet.add(id);
+            localStorage.setItem('kings_hand_ach_v6', JSON.stringify(Array.from(unlockedSet)));
+            updateLogbookCounters();
+            toastQueue.push(ach);
+            processToastQueue();
+        }
+
+        function processToastQueue() {
+            if (toastBusy || toastQueue.length === 0) return;
+            toastBusy = true;
+            const ach = toastQueue.shift();
+
+            const toast = document.getElementById('achievement-toast');
+            document.getElementById('toast-label').textContent = I18N[lang].toastUnlocked;
+            document.getElementById('toast-title').textContent = ach[lang][0];
+
+            toast.classList.remove('opacity-0', '-translate-y-6');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-6');
+                setTimeout(() => {
+                    toastBusy = false;
+                    processToastQueue();
+                }, 400);
+            }, 2400);
+        }
+
+        function updateLogbookCounters() {
+            const count = unlockedSet.size;
+            document.getElementById('title-logbook-count').textContent = `${count}/50`;
+            document.getElementById('succession-logbook-text').textContent = I18N[lang].logbookBtn(count);
+        }
+
+        function openLogbookModal(e) {
+            if (e) e.stopPropagation();
+            const modal = document.getElementById('logbook-modal');
+            const list = document.getElementById('logbook-list');
+            const count = unlockedSet.size;
+            const pct = Math.round((count / 50) * 100);
+
+            document.getElementById('logbook-modal-title').textContent = I18N[lang].logbookTitle;
+            document.getElementById('logbook-modal-subtitle').textContent = I18N[lang].logbookSubtitle(count, pct);
+            document.getElementById(' close-logbook-bottom'?.trim() || 'close-logbook-bottom').textContent = I18N[lang].logbookClose;
+            document.getElementById('logbook-progress-bar').style.width = `${pct}%`;
+
+            list.innerHTML = ACHIEVEMENTS.map((ach, idx) => {
+                const isUnlocked = unlockedSet.has(ach.id);
+                const title = ach[lang][0];
+                const desc = ach[lang][1];
+                return `
+                    <div class="flex items-center gap-3 p-3 rounded-xl border ${isUnlocked ? 'bg-[#1c1726] border-[#d4af37]/50' : 'bg-[#120f19] border-[#251f30] opacity-55'}">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono-reigns text-xs ${isUnlocked ? 'bg-[#d4af37]/20 border border-[#d4af37] text-[#fbbf24]' : 'bg-[#1a1624] text-[#6e647d]'}">
+                            ${isUnlocked ? '★' : (idx + 1)}
+                        </div>
+                        <div class="flex flex-col min-w-0">
+                            <span class="font-gothic text-xs font-bold ${isUnlocked ? 'text-[#f5ebd6]' : 'text-[#8c829e]'}">${title}</span>
+                            <span class="text-xs ${isUnlocked ? 'text-[#c7baa5]' : 'text-[#685e78]'} leading-tight">${desc}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeLogbookModal(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('logbook-modal').classList.add('hidden');
+        }
+
+        // --- 3. NOMBRES DE MANOS Y LÍNEA DE REYES (EMPEZANDO SIEMPRE CON REY RAUL) ---
+        const HAND_NAMES = [
+            "Lord Vane", "Lord Cassian", "Lord Thorne", "Lady Morrigan",
+            "Lord Sterling", "Lord Corvus", "Lady Vesper", "Lord Blackwood",
+            "Lord Julian", "Lady Helena", "Lord Alaric", "Lord Dorian"
+        ];
+
+        const KING_SUCCESSION_NAMES = [
+            { en: "King Raul", es: "Rey Raul" },
+            { en: "King Edmund II", es: "Rey Edmund II" },
+            { en: "King Lorenzo", es: "Rey Lorenzo" },
+            { en: "King Balthazar", es: "Rey Balthazar" },
+            { en: "King Victor III", es: "Rey Victor III" },
+            { en: "King Hector", es: "Rey Hector" },
+            { en: "King Solomon", es: "Rey Solomon" }
+        ];
+
+        function getCurrentKingName() {
+            const k = KING_SUCCESSION_NAMES[kingIndex % KING_SUCCESSION_NAMES.length];
+            return k[lang];
+        }
+
+        // --- 4. SONIDO SINTETIZADO ---
+        let audioCtx = null;
+        function playFeedbackSound(type) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const now = audioCtx.currentTime;
+
+                if (type === 'swipe') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(140, now);
+                    osc.frequency.exponentialRampToValueAtTime(65, now + 0.09);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                } else if (type === 'postpone') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(240, now);
+                    osc.frequency.exponentialRampToValueAtTime(420, now + 0.12);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'death') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(110, now);
+                    osc.frequency.exponentialRampToValueAtTime(42, now + 0.35);
+                    gain.gain.setValueAtTime(0.11, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                }
+            } catch (e) {}
+        }
+
+        // --- 5. RETRATOS Y CARTAS DE MUERTE EN VITRAL ---
+        const ART = {
+            king: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#3b1219"/>
+                    <polygon points="0,0 100,120 0,240" fill="#521922"/>
+                    <polygon points="200,0 100,120 200,240" fill="#2c0c11"/>
+                    <polygon points="0,0 200,0 100,120" fill="#7c2430"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="40,240 62,155 138,155 160,240" fill="#991b1b" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="56,162 144,162 134,180 66,180" fill="#f5ebd6" stroke="#0d0b10" stroke-width="4"/>
+                    <rect x="75" y="88" width="50" height="62" fill="#e6be9a" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="100" y="88" width="25" height="62" fill="#c89d7c"/>
+                    <polygon points="72,130 128,130 120,166 100,178 80,166" fill="#4b3621" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="83" y="108" width="8" height="5" fill="#0d0b10"/>
+                    <rect x="109" y="108" width="8" height="5" fill="#0d0b10"/>
+                    <polygon points="70,88 66,52 88,72 100,46 112,72 134,52 130,88" fill="#fbbf24" stroke="#0d0b10" stroke-width="5" stroke-linejoin="round"/>
+                    <circle cx="100" cy="74" r="4.5" fill="#e11d48"/>
+                </svg>
+            `,
+            general: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#7f1d1d"/>
+                    <polygon points="0,0 100,120 0,240" fill="#991b1b"/>
+                    <polygon points="200,0 100,120 200,240" fill="#5c1313"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="35,240 58,158 142,158 165,240" fill="#334155" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="68,85 100,52 132,85 132,162 68,162" fill="#94a3b8" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="100,52 132,85 132,162 100,162" fill="#64748b"/>
+                    <rect x="80" y="105" width="40" height="22" fill="#0d0b10"/>
+                    <line x1="90" y1="105" x2="90" y2="127" stroke="#94a3b8" stroke-width="4"/>
+                    <line x1="100" y1="105" x2="100" y2="127" stroke="#94a3b8" stroke-width="4"/>
+                    <line x1="110" y1="105" x2="110" y2="127" stroke="#64748b" stroke-width="4"/>
+                    <polygon points="75,134 100,148 125,134 125,152 100,166 75,152" fill="#fde68a" stroke="#0d0b10" stroke-width="4"/>
+                </svg>
+            `,
+            spy: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#171326"/>
+                    <polygon points="0,0 100,120 0,240" fill="#231d38"/>
+                    <polygon points="200,0 100,120 200,240" fill="#100d1a"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="40,240 68,82 100,52 132,82 160,240" fill="#312e48" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="76,94 100,72 124,94 120,148 80,148" fill="#0d0b10"/>
+                    <polygon points="83,112 96,115 86,120" fill="#fbbf24"/>
+                    <polygon points="117,112 104,115 114,120" fill="#fbbf24"/>
+                </svg>
+            `,
+            bishop: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#4c1127"/>
+                    <polygon points="0,0 100,120 0,240" fill="#6b1635"/>
+                    <polygon points="200,0 100,120 200,240" fill="#360a1b"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="44,240 66,154 134,154 156,240" fill="#881337" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="75,98 125,98 120,154 80,154" fill="#dfc1a7" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="70,98 100,40 130,98" fill="#be123c" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="100" y1="56" x2="100" y2="88" stroke="#fbbf24" stroke-width="5"/>
+                    <line x1="88" y1="70" x2="112" y2="70" stroke="#fbbf24" stroke-width="5"/>
+                    <rect x="84" y="118" width="8" height="4" fill="#0d0b10"/>
+                    <rect x="108" y="118" width="8" height="4" fill="#0d0b10"/>
+                </svg>
+            `,
+            merchant: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#0c2d48"/>
+                    <polygon points="0,0 100,120 0,240" fill="#144266"/>
+                    <polygon points="200,0 100,120 200,240" fill="#081f33"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="38,240 60,155 140,155 162,240" fill="#0284c7" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="76" y="96" width="48" height="58" fill="#e6be9a" stroke="#0d0b10" stroke-width="5"/>
+                    <ellipse cx="100" cy="84" rx="44" ry="22" fill="#1d4ed8" stroke="#0d0b10" stroke-width="5"/>
+                    <circle cx="100" cy="80" r="7" fill="#fbbf24" stroke="#0d0b10" stroke-width="3"/>
+                    <rect x="84" y="114" width="8" height="5" fill="#0d0b10"/>
+                    <rect x="108" y="114" width="8" height="5" fill="#0d0b10"/>
+                </svg>
+            `,
+            peasant: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#0f392b"/>
+                    <polygon points="0,0 100,120 0,240" fill="#16523e"/>
+                    <polygon points="200,0 100,120 200,240" fill="#09261d"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="45,240 66,158 134,158 155,240" fill="#78350f" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="76" y="96" width="48" height="60" fill="#d6b08c" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="46,98 100,60 154,98" fill="#eab308" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="84" y="116" width="8" height="5" fill="#0d0b10"/>
+                    <rect x="108" y="116" width="8" height="5" fill="#0d0b10"/>
+                </svg>
+            `,
+            alchemist: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#063932"/>
+                    <polygon points="0,0 100,120 0,240" fill="#0b5248"/>
+                    <polygon points="200,0 100,120 200,240" fill="#042420"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="45,240 65,155 135,155 155,240" fill="#047857" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="76" y="90" width="48" height="62" fill="#ead0b8" stroke="#0d0b10" stroke-width="5"/>
+                    <circle cx="88" cy="115" r="10" fill="#34d399" stroke="#0d0b10" stroke-width="4"/>
+                    <circle cx="112" cy="115" r="10" fill="#34d399" stroke="#0d0b10" stroke-width="4"/>
+                </svg>
+            `,
+            // NUEVOS PERSONAJES DE LA CORTE EN VITRAL
+            queen: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#31102f"/>
+                    <polygon points="0,0 100,120 0,240" fill="#4a1942"/>
+                    <polygon points="200,0 100,120 200,240" fill="#210920"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="50,90 100,45 150,90 165,240 35,240" fill="#1e1b2e" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="45,240 68,156 132,156 155,240" fill="#701a75" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="78" y="92" width="44" height="60" fill="#f3d7be" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="75,92 82,62 94,78 100,56 106,78 118,62 125,92" fill="#fbbf24" stroke="#0d0b10" stroke-width="4"/>
+                    <rect x="85" y="114" width="7" height="4" fill="#0d0b10"/>
+                    <rect x="108" y="114" width="7" height="4" fill="#0d0b10"/>
+                    <polygon points="95,136 105,136 100,141" fill="#be123c"/>
+                </svg>
+            `,
+            jester: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#2e1065"/>
+                    <polygon points="0,0 100,120 0,240" fill="#4c1d95"/>
+                    <polygon points="200,0 100,120 200,240" fill="#1e1b4b"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="42,240 65,158 135,158 158,240" fill="#d97706" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="56,158 76,178 96,158 116,178 140,158" fill="#dc2626" stroke="#0d0b10" stroke-width="4"/>
+                    <rect x="76" y="95" width="48" height="60" fill="#f5e1ce" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="74,95 45,60 88,82 100,50 112,82 155,60 126,95" fill="#dc2626" stroke="#0d0b10" stroke-width="5"/>
+                    <circle cx="45" cy="60" r="7" fill="#fbbf24" stroke="#0d0b10" stroke-width="3"/>
+                    <circle cx="155" cy="60" r="7" fill="#fbbf24" stroke="#0d0b10" stroke-width="3"/>
+                    <circle cx="100" cy="50" r="7" fill="#fbbf24" stroke="#0d0b10" stroke-width="3"/>
+                    <rect x="85" y="115" width="7" height="5" fill="#0d0b10"/>
+                    <rect x="108" y="115" width="7" height="5" fill="#0d0b10"/>
+                </svg>
+            `,
+            plagueDoctor: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#091e1a"/>
+                    <polygon points="0,0 100,120 0,240" fill="#11332c"/>
+                    <polygon points="200,0 100,120 200,240" fill="#05120f"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="40,240 64,152 136,152 160,240" fill="#18181b" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="46" y="76" width="108" height="14" fill="#18181b" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="68,76 76,48 124,48 132,76" fill="#27272a" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="75,90 125,90 130,136 156,148 95,152 75,136" fill="#e5e7eb" stroke="#0d0b10" stroke-width="5"/>
+                    <circle cx="96" cy="112" r="9" fill="#991b1b" stroke="#0d0b10" stroke-width="4"/>
+                </svg>
+            `,
+            judge: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#1f1610"/>
+                    <polygon points="0,0 100,120 0,240" fill="#33241b"/>
+                    <polygon points="200,0 100,120 200,240" fill="#140d09"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="38,240 62,155 138,155 162,240" fill="#451a03" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="88,155 112,155 108,195 92,195" fill="#f5ebd6" stroke="#0d0b10" stroke-width="4"/>
+                    <polygon points="64,86 136,86 142,156 122,156 122,102 78,102 78,156 58,156" fill="#d6d3d1" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="78" y="96" width="44" height="58" fill="#d6b08c" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="85" y="116" width="8" height="4" fill="#0d0b10"/>
+                    <rect x="107" y="116" width="8" height="4" fill="#0d0b10"/>
+                </svg>
+            `,
+            admiral: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#082f49"/>
+                    <polygon points="0,0 100,120 0,240" fill="#0c4a6e"/>
+                    <polygon points="200,0 100,120 200,240" fill="#051e30"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="38,240 60,156 140,156 162,240" fill="#1e3a8a" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="52" y="152" width="22" height="12" fill="#fbbf24" stroke="#0d0b10" stroke-width="4"/>
+                    <rect x="126" y="152" width="22" height="12" fill="#fbbf24" stroke="#0d0b10" stroke-width="4"/>
+                    <rect x="76" y="95" width="48" height="60" fill="#d9b38c" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="44,95 100,54 156,95" fill="#172554" stroke="#0d0b10" stroke-width="5"/>
+                    <circle cx="90" cy="116" r="6" fill="#0d0b10"/>
+                    <line x1="76" y1="106" x2="104" y2="122" stroke="#0d0b10" stroke-width="4"/>
+                    <rect x="108" y="114" width="8" height="5" fill="#0d0b10"/>
+                </svg>
+            `,
+            executionerChar: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#260b0e"/>
+                    <polygon points="0,0 100,120 0,240" fill="#3d1015"/>
+                    <polygon points="200,0 100,120 200,240" fill="#170608"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="36,240 58,154 142,154 164,240" fill="#27272a" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="68,154 78,66 100,48 122,66 132,154" fill="#18181b" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="82" y="106" width="10" height="5" fill="#f5ebd6"/>
+                    <rect x="108" y="106" width="10" height="5" fill="#f5ebd6"/>
+                    <polygon points="146,56 178,82 170,124 146,102" fill="#94a3b8" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="146" y1="50" x2="146" y2="240" stroke="#5c4033" stroke-width="7"/>
+                </svg>
+            `,
+            witch: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#06281e"/>
+                    <polygon points="0,0 100,120 0,240" fill="#0c3d2e"/>
+                    <polygon points="200,0 100,120 200,240" fill="#031711"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="44,240 68,156 132,156 156,240" fill="#111827" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="78" y="96" width="44" height="60" fill="#a7f3d0" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="66,74 44,50 74,58 76,96" fill="#78350f" stroke="#0d0b10" stroke-width="4"/>
+                    <polygon points="134,74 156,50 126,58 124,96" fill="#78350f" stroke="#0d0b10" stroke-width="4"/>
+                    <rect x="85" y="115" width="7" height="5" fill="#10b981"/>
+                    <rect x="108" y="115" width="7" height="5" fill="#10b981"/>
+                </svg>
+            `,
+            envoy: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#451a03"/>
+                    <polygon points="0,0 100,120 0,240" fill="#78350f"/>
+                    <polygon points="200,0 100,120 200,240" fill="#290f02"/>
+                    <line x1="0" y1="0" x2="200" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="200" y1="0" x2="0" y2="240" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="40,240 62,156 138,156 160,240" fill="#b45309" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="76" y="96" width="48" height="60" fill="#b07d56" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="64,98 100,56 136,98 126,108 74,108" fill="#fef3c7" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="100,76 107,88 100,100 93,88" fill="#10b981" stroke="#0d0b10" stroke-width="3"/>
+                    <rect x="84" y="118" width="8" height="4" fill="#0d0b10"/>
+                    <rect x="108" y="118" width="8" height="4" fill="#0d0b10"/>
+                </svg>
+            `,
+
+            // 8 ARTES DE MUERTE ÚNICOS (UNO PARA CADA CAUSA DE MUERTE)
+            // 1. Corona 0%: Guillotina / Decapitado
+            deathExecution: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#28090e"/>
+                    <line x1="35" y1="25" x2="35" y2="225" stroke="#5c4033" stroke-width="10"/>
+                    <line x1="165" y1="25" x2="165" y2="225" stroke="#5c4033" stroke-width="10"/>
+                    <line x1="25" y1="25" x2="175" y2="25" stroke="#5c4033" stroke-width="12"/>
+                    <polygon points="42,55 158,55 158,95 42,130" fill="#cbd5e1" stroke="#0d0b10" stroke-width="5"/>
+                    <circle cx="100" cy="175" r="24" fill="#120d16" stroke="#991b1b" stroke-width="5"/>
+                </svg>
+            `,
+            // 2. Corona 100%: Convertido en Bufón con collar de cascabeles
+            deathJester: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#271033"/>
+                    <polygon points="0,0 200,0 100,120" fill="#3b174d"/>
+                    <polygon points="55,150 30,90 85,120 100,65 115,120 170,90 145,150" fill="#e11d48" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="100,65 115,120 170,90 145,150 100,150" fill="#f59e0b" stroke="#0d0b10" stroke-width="5"/>
+                    <circle cx="30" cy="90" r="10" fill="#fbbf24" stroke="#0d0b10" stroke-width="4"/>
+                    <circle cx="100" cy="65" r="10" fill="#fbbf24" stroke="#0d0b10" stroke-width="4"/>
+                    <circle cx="170" cy="90" r="10" fill="#fbbf24" stroke="#0d0b10" stroke-width="4"/>
+                    <rect x="65" y="150" width="70" height="18" fill="#52525b" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="100" y1="168" x2="100" y2="240" stroke="#71717a" stroke-width="7" stroke-dasharray="10,6"/>
+                </svg>
+            `,
+            // 3. Pueblo 0%: Horcas y Antorchas en llamas
+            deathMob: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#2b0908"/>
+                    <polygon points="0,240 40,150 85,205 130,135 170,195 200,145 200,240" fill="#dc2626"/>
+                    <polygon points="20,240 65,175 105,215 145,165 185,240" fill="#f59e0b"/>
+                    <line x1="45" y1="220" x2="145" y2="65" stroke="#78350f" stroke-width="8"/>
+                    <polygon points="135,40 165,30 175,65 145,75" fill="#f97316" stroke="#0d0b10" stroke-width="4"/>
+                    <line x1="155" y1="220" x2="65" y2="75" stroke="#52525b" stroke-width="7"/>
+                    <path d="M45 85 L65 75 L85 65 M45 85 L32 55 M65 75 L52 45 M85 65 L72 35" stroke="#cbd5e1" stroke-width="5" fill="none"/>
+                </svg>
+            `,
+            // 4. Pueblo 100%: Santo Mártir descuartizado por fanáticos
+            deathMartyr: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#241008"/>
+                    <line x1="0" y1="80" x2="200" y2="170" stroke="#857558" stroke-width="4"/>
+                    <line x1="0" y1="170" x2="200" y2="80" stroke="#857558" stroke-width="4"/>
+                    <polygon points="85,60 115,60 115,100 100,112 85,100" fill="#f5f5f4" stroke="#0d0b10" stroke-width="4"/>
+                    <polygon points="100,60 115,60 115,100 100,112" fill="#a8a29e"/>
+                    <polygon points="85,60 82,42 93,52 100,40 107,52 118,42 115,60" fill="#facc15"/>
+                    <polygon points="84,108 116,108 122,160 78,160" fill="#f5f5f4"/>
+                    <polygon points="100,108 116,108 122,160 100,160" fill="#a8a29e"/>
+                    <polygon points="84,112 36,92 42,106 82,126" fill="#f5f5f4"/>
+                    <polygon points="116,112 164,92 158,106 118,126" fill="#a8a29e"/>
+                    <polygon points="78,155 122,155 126,180 100,172 74,180" fill="#ec4899"/>
+                    <polygon points="78,180 96,180 76,228 56,225" fill="#f5f5f4"/>
+                    <polygon points="104,180 122,180 144,225 124,228" fill="#a8a29e"/>
+                    <rect x="92" y="75" width="3" height="12" fill="#0d0b10"/>
+                    <rect x="105" y="75" width="3" height="12" fill="#0d0b10"/>
+                </svg>
+            `,
+            // 5. Ejército 0%: Castillo en ruinas e invasión bárbara
+            deathInvasion: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#290d12"/>
+                    <polygon points="0,240 50,150 110,190 160,120 200,175 200,240" fill="#991b1b"/>
+                    <polygon points="25,240 25,110 50,110 50,130 75,130 75,105 100,145 125,120 155,140 155,240" fill="#334155" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="40" y1="35" x2="115" y2="175" stroke="#0d0b10" stroke-width="4"/>
+                    <line x1="150" y1="45" x2="85" y2="185" stroke="#0d0b10" stroke-width="4"/>
+                    <line x1="115" y1="30" x2="145" y2="160" stroke="#0d0b10" stroke-width="4"/>
+                </svg>
+            `,
+            // 6. Ejército 100%: Golpe Militar / Encerrado tras barrotes
+            deathCoup: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#18181b"/>
+                    <rect x="75" y="100" width="50" height="55" fill="#52525b" stroke="#0d0b10" stroke-width="4"/>
+                    <rect x="85" y="120" width="8" height="6" fill="#fbbf24"/>
+                    <rect x="107" y="120" width="8" height="6" fill="#fbbf24"/>
+                    <line x1="40" y1="0" x2="40" y2="240" stroke="#27272a" stroke-width="12"/>
+                    <line x1="80" y1="0" x2="80" y2="240" stroke="#27272a" stroke-width="12"/>
+                    <line x1="120" y1="0" x2="120" y2="240" stroke="#27272a" stroke-width="12"/>
+                    <line x1="160" y1="0" x2="160" y2="240" stroke="#27272a" stroke-width="12"/>
+                    <line x1="0" y1="65" x2="200" y2="65" stroke="#0d0b10" stroke-width="10"/>
+                    <line x1="0" y1="185" x2="200" y2="185" stroke="#0d0b10" stroke-width="10"/>
+                </svg>
+            `,
+            // 7. Tesoro 0%: Grilletes y cadenas de esclavo por bancarrota
+            deathBankrupt: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#0c1926"/>
+                    <line x1="55" y1="0" x2="55" y2="115" stroke="#64748b" stroke-width="10" stroke-dasharray="14,8"/>
+                    <line x1="145" y1="0" x2="145" y2="115" stroke="#64748b" stroke-width="10" stroke-dasharray="14,8"/>
+                    <circle cx="55" cy="145" r="28" fill="none" stroke="#94a3b8" stroke-width="12"/>
+                    <circle cx="145" cy="145" r="28" fill="none" stroke="#94a3b8" stroke-width="12"/>
+                    <line x1="83" y1="145" x2="117" y2="145" stroke="#64748b" stroke-width="9" stroke-dasharray="10,6"/>
+                    <polygon points="85,195 115,195 125,225 75,225" fill="#78350f" stroke="#0d0b10" stroke-width="4"/>
+                </svg>
+            `,
+            // 8. Tesoro 100%: Copa de oro envenenada en el banquete
+            deathGold: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#081c24"/>
+                    <polygon points="20,240 100,115 180,240" fill="#f59e0b" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="65,120 135,120 115,155 85,155" fill="#fbbf24" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="93" y="155" width="14" height="35" fill="#fbbf24" stroke="#0d0b10" stroke-width="4"/>
+                    <ellipse cx="100" cy="120" rx="33" ry="9" fill="#10b981"/>
+                    <circle cx="95" cy="95" r="6" fill="#10b981"/>
+                    <circle cx="110" cy="80" r="4" fill="#34d399"/>
+                </svg>
+            `,
+            royalTomb: `
+                <svg viewBox="0 0 200 240" class="w-full h-full">
+                    <rect width="200" height="240" fill="#16121f"/>
+                    <polygon points="0,0 200,0 100,120" fill="#2c223d"/>
+                    <rect x="45" y="135" width="110" height="65" fill="#475569" stroke="#0d0b10" stroke-width="5"/>
+                    <rect x="35" y="120" width="130" height="20" fill="#64748b" stroke="#0d0b10" stroke-width="5"/>
+                    <polygon points="72,120 68,85 88,104 100,78 112,104 132,85 128,120" fill="#fbbf24" stroke="#0d0b10" stroke-width="5"/>
+                    <line x1="100" y1="150" x2="100" y2="188" stroke="#cbd5e1" stroke-width="5"/>
+                    <line x1="85" y1="165" x2="115" y2="165" stroke="#cbd5e1" stroke-width="5"/>
+                </svg>
+            `
+        };
+
+        // --- 6. DIÁLOGO INICIAL CON EL REY RAUL (SIN EFECTOS EN LOS ÍCONOS) ---
+        const KING_INTRO = [
+            {
+                art: 'king',
+                speaker: { en: "King Raul", es: "Rey Raul" },
+                text: {
+                    en: "Ah, you finally arrived. Take a look at the throne room... everyone wants something from me.",
+                    es: "Ah, por fin llegaste. Mira el salón del trono... todo el mundo quiere algo de mí."
+                },
+                left: { label: { en: "Your Majesty", es: "Su Majestad" }, effects: {} },
+                right: { label: { en: "I am ready", es: "Estoy listo" }, effects: {} }
+            },
+            {
+                art: 'king',
+                speaker: { en: "King Raul", es: "Rey Raul" },
+                text: {
+                    en: "I am going boar hunting and feasting. As my Right Hand, you will rule in my stead.",
+                    es: "Me voy de cacería y banquete. Como mi Mano Derecha, tú gobernarás en mi lugar."
+                },
+                left: { label: { en: "It is an honor", es: "Es un honor" }, effects: {} },
+                right: { label: { en: "Leave it to me", es: "Déjamelo a mí" }, effects: {} }
+            },
+            {
+                art: 'king',
+                speaker: { en: "King Raul", es: "Rey Raul" },
+                text: {
+                    en: "Keep the four pillars in balance. If any empties or overflows, your head will roll. Swipe UP to postpone a crisis.",
+                    es: "Mantén los cuatro pilares en equilibrio. Si alguno se vacía o se rebalsa, rodará tu cabeza. Desliza ARRIBA para posponer."
+                },
+                left: { label: { en: "Understood", es: "Entendido" }, effects: {} },
+                right: { label: { en: "I will obey", es: "Obedeceré" }, effects: {} }
+            },
+            {
+                art: 'king',
+                speaker: { en: "King Raul", es: "Rey Raul" },
+                text: {
+                    en: "Here is my royal signet ring. Let the petitioners enter... and don't wake me unless the castle is burning.",
+                    es: "Toma mi anillo real. Que pasen los peticionarios... y no me despiertes a menos que el castillo esté en llamas."
+                },
+                left: { label: { en: "Begin Mandate", es: "Iniciar Mandato" }, effects: {} },
+                right: { label: { en: "Open the Gates", es: "Abrir las Puertas" }, effects: {} }
+            }
+        ];
+
+        // --- 7. MAZO DE CARTAS BILINGÜE CON DISPARADORES DE LOGROS ---
+        const DECK_DATA = [
+            {
+                art: 'spy',
+                speaker: { en: "Vespera", es: "Vespera" },
+                text: {
+                    en: "The royal cupbearer tasted the King's wine and dropped dead. The King thinks it was old age. Tell him?",
+                    es: "El copero real probó el vino del Rey y cayó muerto. El Rey cree que murió de viejo. ¿Le decimos la verdad?"
+                },
+                left: { label: { en: "Hide it", es: "Ocultarlo" }, effects: { crown: 10, people: -10 }, ach: "ev_hide_poison" },
+                right: { label: { en: "Purge kitchen", es: "Purgar cocina" }, effects: { crown: -15, army: 15, treasury: -10 }, ach: "ev_save_king_wine" }
+            },
+            {
+                art: 'general',
+                speaker: { en: "General Vane", es: "General Vane" },
+                text: {
+                    en: "We can never be too prepared. The northern border is weak; you need to recruit more soldiers!",
+                    es: "Nunca se está demasiado preparado. La frontera norte es débil; ¡necesitas reclutar más soldados!"
+                },
+                left: { label: { en: "Too costly", es: "Muy caro" }, effects: { army: -15, treasury: 10 } },
+                right: { label: { en: "Recruit now", es: "Reclutar ya" }, effects: { army: 20, treasury: -15, people: -10 } }
+            },
+            {
+                art: 'bishop',
+                speaker: { en: "Cardinal Malakor", es: "Cardenal Malakor" },
+                text: {
+                    en: "The cathedral needs new stained glass from the south. The people will gladly donate if the army 'encourages' them.",
+                    es: "La catedral necesita vitrales nuevos traídos del sur. El pueblo donará con gusto si el ejército los 'anima'."
+                },
+                left: { label: { en: "Forbid it", es: "Prohibirlo" }, effects: { crown: -15, people: 15 } },
+                right: { label: { en: "Collect tithe", es: "Cobrar diezmo" }, effects: { crown: 15, people: -20, treasury: 15 }, ach: "ev_build_cathedral" }
+            },
+            {
+                art: 'merchant',
+                speaker: { en: " Guildmaster Lorenzo", es: "Mercader Lorenzo" },
+                text: {
+                    en: "Foreign bankers offer an emergency loan in gold, in exchange for the kingdom's salt mines.",
+                    es: "Los banqueros extranjeros ofrecen un préstamo de oro inmediato a cambio de las minas de sal."
+                },
+                left: { label: { en: "Reject debt", es: "Rechazar deuda" }, effects: { treasury: -10, people: 10 } },
+                right: { label: { en: "Sign pact", es: "Firmar pacto" }, effects: { treasury: 25, people: -15, crown: -10 } }
+            },
+            {
+                art: 'peasant',
+                speaker: { en: "Village Elder", es: "Portavoz Campesino" },
+                text: {
+                    en: "Frost ruined the wheat harvest. People are eating bark. Open the Royal Granaries, my Lord!",
+                    es: "La helada quemó el trigo. La gente come raíces en el bosque. ¡Abrid los graneros reales, mi Señor!"
+                },
+                left: { label: { en: "Let them pray", es: "Que recen" }, effects: { people: -25, treasury: 10 }, ach: "ev_starve_winter" },
+                right: { label: { en: "Open granaries", es: "Abrir graneros" }, effects: { people: 20, treasury: -20, army: -10 }, ach: "ev_open_granaries" }
+            },
+            {
+                art: 'king',
+                speaker: { en: "The Monarch", es: "El Monarca" },
+                text: {
+                    en: "Hand! I dreamt of a golden fountain pouring spiced wine in the courtyard. Build it before Friday!",
+                    es: "¡Mano! Soñé con una fuente de oro que lanza vino especiado en el patio. ¡Constrúyela antes del viernes!"
+                },
+                left: { label: { en: "Impossible", es: "Es imposible" }, effects: { crown: -20, treasury: 10 } },
+                right: { label: { en: "At once, Sire", es: "Ahora mismo" }, effects: { crown: 20, treasury: -25, people: -10 } }
+            },
+            {
+                art: 'alchemist',
+                speaker: { en: "Seraphina", es: "Seraphina" },
+                text: {
+                    en: "With ten chests of lead and a little sulfur, I can transmute gold for the Crown. Do you fund my laboratory?",
+                    es: "Con diez cofres de plomo y algo de azufre puedo fabricar oro para la Corona. ¿Financias mi laboratorio?"
+                },
+                left: { label: { en: "Charlatan", es: "Charlatana" }, effects: { crown: -10, people: 5 } },
+                right: { label: { en: "Fund alchemy", es: "Financiar" }, effects: { treasury: -20, crown: 15, army: 10 }, ach: "ev_fund_alchemy" }
+            },
+            {
+                art: 'general',
+                speaker: { en: "General Vane", es: "General Vane" },
+                text: {
+                    en: "The Southern Mercenaries demand double pay right now, or they will sack our capital tonight.",
+                    es: "Los mercenarios del sur exigen doble paga hoy mismo o saquearán los barrios bajos esta noche."
+                },
+                left: { label: { en: "Fight them", es: "Combatirlos" }, effects: { army: -25, people: -15, crown: 10 }, ach: "ev_crush_mercenaries" },
+                right: { label: { en: "Pay in gold", es: "Pagarles oro" }, effects: { treasury: -25, army: 15 }, ach: "ev_pay_mercenaries" }
+            },
+            {
+                art: 'spy',
+                speaker: { en: "Vespera", es: "Vespera" },
+                text: {
+                    en: "I burned several awkward petitions in the fireplace. You now have extra time to postpone future problems.",
+                    es: "Quemé varios expedientes incómodos en la chimenea. Ahora tienes margen extra para posponer problemas."
+                },
+                left: { label: { en: "Follow the law", es: "Seguir la ley" }, effects: { crown: 10, people: 10 } },
+                right: { label: { en: "Take advantage", es: "Aprovechar (+1)" }, effects: { crown: -10, treasury: -10 }, grantPostpone: 1, ach: "ev_burn_archives" }
+            },
+            {
+                art: 'merchant',
+                speaker: { en: "Guildmaster Lorenzo", es: "Mercader Lorenzo" },
+                text: {
+                    en: "If we tax silk and noble banquets, the royal coffers will overflow within a month.",
+                    es: "Si cobramos un impuesto a la seda y los banquetes nobles, las arcas se llenarán en un mes."
+                },
+                left: { label: { en: "Protect nobles", es: "Proteger nobles" }, effects: { crown: 15, people: -15 } },
+                right: { label: { en: "Tax luxury", es: "Cobrar impuesto" }, effects: { treasury: 25, crown: -20, people: 15 }, ach: "ev_tax_nobles" }
+            },
+            {
+                art: 'peasant',
+                speaker: { en: "Village Elder", es: "Portavoz Campesino" },
+                text: {
+                    en: "A red fever has broken out in the southern port. Should we seal the gates and quarantine the district?",
+                    es: "Ha brotado una fiebre roja en el puerto del sur. ¿Cerramos las puertas y ponemos el barrio en cuarentena?"
+                },
+                left: { label: { en: "Keep trade open", es: "Dejar abierto" }, effects: { treasury: 15, people: -25 } },
+                right: { label: { en: "Quarantine port", es: "Cuarentena" }, effects: { people: 15, treasury: -20, army: -10 }, ach: "ev_quarantine_plague" }
+            },
+            {
+                art: 'general',
+                speaker: { en: "General Vane", es: "General Vane" },
+                text: {
+                    en: "Shepherds claim a dragon nested in the Ash Mountains. Give me twohundred knights to hunt the beast!",
+                    es: "Los pastores aseguran que un dragón anidó en las montañas. ¡Dame doscientos caballeros para cazarlo!"
+                },
+                left: { label: { en: "Drunken tales", es: "Cuentos de ebrios" }, effects: { people: -15, army: 10 } },
+                right: { label: { en: "Hunt the beast", es: "Cazar a la bestia" }, effects: { army: -20, crown: 20, people: 15 }, ach: "ev_dragon_expedition" }
+            },
+            {
+                art: 'queen',
+                speaker: { en: "Queen Consort", es: "La Reina Consorte" },
+                text: {
+                    en: "My cousins from the High Duchy arrived. Throw a grand masquerade ball tonight or our house will look poor.",
+                    es: "Mis primos del Ducado han llegado. Organiza un gran baile de máscaras esta noche o pareceremos pobres."
+                },
+                left: { label: { en: "A modest dinner", es: "Cena modesta" }, effects: { crown: -15, treasury: 10 } },
+                right: { label: { en: "Grand Masquerade", es: "Gran Baile" }, effects: { crown: 20, treasury: -20, people: -10 } }
+            },
+            {
+                art: 'jester',
+                speaker: { en: "Pip the Jester", es: "El Bufón Pip" },
+                text: {
+                    en: "Everyone in the taverns is singing my new ballad about how the General fears the dark! Should I sing it at court?",
+                    es: "¡En las tabernas todos cantan mi canción sobre cómo el General le teme a la oscuridad! ¿La canto en la corte?"
+                },
+                left: { label: { en: "Silence him", es: "Silenciarlo" }, effects: { people: -15, army: 15 } },
+                right: { label: { en: "Let him sing!", es: "¡Que cante!" }, effects: { people: 20, crown: 10, army: -20 } }
+            },
+            {
+                art: 'plagueDoctor',
+                speaker: { en: "Doctor Corvus", es: "Doctor Corvus" },
+                text: {
+                    en: "The swamp miasma approaches. Give me leeches, vinegar and permission to burn the riverside slums.",
+                    es: "El miasma del pantano se acerca. Dame sanguijuelas, vinagre y permiso para quemar las chozas del río."
+                },
+                left: { label: { en: "Too extreme", es: "Muy extremo" }, effects: { people: -15, crown: -10 } },
+                right: { label: { en: "Purge the slums", es: "Purgar el río" }, effects: { people: -20, army: 10, treasury: -15 } }
+            },
+            {
+                art: 'judge',
+                speaker: { en: "Chief Magistrate", es: "Juez Supremo" },
+                text: {
+                    en: "We caught the King's favorite nephew smuggling royal silver. Does the law apply to royal blood?",
+                    es: "Atrapamos al sobrino favorito del Rey contrabandeando plata real. ¿La ley aplica a la sangre real?"
+                },
+                left: { label: { en: "Pardon him", es: "Perdonarlo" }, effects: { crown: 15, people: -20, treasury: -10 } },
+                right: { label: { en: "Seize his silver", es: "Confiscar plata" }, effects: { crown: -20, people: 15, treasury: 20 } }
+            },
+            {
+                art: 'admiral',
+                speaker: { en: "Admiral Ironhook", es: "Almirante Garfio" },
+                text: {
+                    en: "Corsairs blockaded the Spice Strait! Fund three new war galleons and I will bring you their treasure.",
+                    es: "¡Los corsarios bloquearon el estrecho! Financia tres galeones de guerra y te traeré su tesoro."
+                },
+                left: { label: { en: "Defend the coast", es: "Defender costa" }, effects: { army: -10, treasury: -10 } },
+                right: { label: { en: "Build Armada", es: "Crear Armada" }, effects: { treasury: -25, army: 25, crown: 10 } }
+            },
+            {
+                art: 'executionerChar',
+                speaker: { en: "Master Morgrimm", es: "Verdugo Morgrimm" },
+                text: {
+                    en: "The dungeons are overflowing with traitors and debtors. Shall we hold a public spectacle in the square?",
+                    es: "Las mazmorras rebalsan de traidores y deudores. ¿Hacemos ejecuciones públicas en la plaza hoy?"
+                },
+                left: { label: { en: "Release debtors", es: "Soltar deudores" }, effects: { people: 15, crown: -15 } },
+                right: { label: { en: "Raise the scaffold", es: "Alzar el cadalso" }, effects: { crown: 15, army: 10, people: -20 } }
+            },
+            {
+                art: 'witch',
+                speaker: { en: "Morgana of the Woods", es: "Morgana del Bosque" },
+                text: {
+                    en: "The old trees whisper of a plot against the throne. Forbid the lumberjacks from entering my forest and I will name the traitor.",
+                    es: "Los árboles susurran sobre una traición. Prohíbe a los leñadores talar mi bosque y te daré el nombre."
+                },
+                left: { label: { en: "Cut the timber", es: "Talar el bosque" }, effects: { treasury: 20, crown: -15 } },
+                right: { label: { en: "Protect the woods", es: "Proteger bosque" }, effects: { crown: 20, people: 10, treasury: -15 } }
+            },
+            {
+                art: 'envoy',
+                speaker: { en: "Ambassador Zahir", es: "Embajador Zahir" },
+                text: {
+                    en: "The Southern Sultanate offers a peace treaty and chests of silk if you pull your garrison back from the desert.",
+                    es: "El Sultanato del Sur ofrece un tratado de paz y cofres de seda si retiras tu guarnición del desierto."
+                },
+                left: { label: { en: "Hold the fort", es: "Mantener fuerte" }, effects: { army: 15, treasury: -15 } },
+                right: { label: { en: "Sign treaty", es: "Firmar tratado" }, effects: { treasury: 25, army: -20, people: 10 } }
+            }
+        ];
+
+        // --- 8. TEXTOS E ILUSTRACIONES DE LAS 8 MUERTES ---
+        const DEATH_REASONS = {
+            crown: {
+                low: {
+                    art: 'deathExecution',
+                    ach: 'death_crown_low',
+                    speaker: { en: "Royal Executioner", es: "El Verdugo Real" },
+                    text: {
+                        en: "The King grew tired of your excuses. Before dessert, he ordered your head placed on the main gate.",
+                        es: "El Rey se hartó de tus excusas. Antes del postre, ordenó colgar tu cabeza en la puerta principal."
+                    }
+                },
+                high: {
+                    art: 'deathJester',
+                    ach: 'death_crown_high',
+                    speaker: { en: "The Royal Court", es: "La Corte Real" },
+                    text: {
+                        en: "You flattered the King so much that he put a jester's bell collar on you and stripped your power.",
+                        es: "Complaciste tanto al Rey que te puso un collar de cascabeles y te convirtió en su bufón personal."
+                    }
+                }
+            },
+            people: {
+                low: {
+                    art: 'deathMob',
+                    ach: 'death_people_low',
+                    speaker: { en: "The Angry Mob", es: "La Turba Enfurecida" },
+                    text: {
+                        en: "Starving peasants broke down the palace doors with pitchforks and torches. No guards came to save you.",
+                        es: "El pueblo hambriento derribó las puertas de palacio con horcas y antorchas. Nadie acudió a salvarte."
+                    }
+                },
+                high: {
+                    art: 'deathMartyr',
+                    ach: 'death_people_high',
+                    speaker: { en: "The Fanatic Crowd", es: "El Pueblo Fanático" },
+                    text: {
+                        en: "The people decided you are a living saint and the perfect martyr. They cut you into tiny relics.",
+                        es: "El pueblo ha decidido que eres un santo viviente y el mártir perfecto. Te cortan en pedacitos para hacer reliquias."
+                    }
+                }
+            },
+            army: {
+                low: {
+                    art: 'deathInvasion',
+                    ach: 'death_army_low',
+                    speaker: { en: "Barbarian Warlord", es: "Caudillo Invasor" },
+                    text: {
+                        en: "Without soldiers on the walls, northern raiders walked right into your chamber and took the throne.",
+                        es: "Sin soldados en las murallas, los invasores del norte entraron caminando hasta tu despacho."
+                    }
+                },
+                high: {
+                    art: 'deathCoup',
+                    ach: 'death_army_high',
+                    speaker: { en: "General Vane", es: "General Vane" },
+                    text: {
+                        en: "The army has grown too powerful. General Vane dissolved the Council and locked you in the dungeon.",
+                        es: "El ejército es demasiado poderoso. El General Vane disolvió el Consejo y te encerró en las mazmorras."
+                    }
+                }
+            },
+            treasury: {
+                low: {
+                    art: 'deathBankrupt',
+                    ach: 'death_treasury_low',
+                    speaker: { en: "Foreign Bankers", es: "Banqueros Extranjeros" },
+                    text: {
+                        en: "The royal vaults are empty. Foreign creditors seized the castle and sold you as a galley slave.",
+                        es: "Las arcas están vacías. Los acreedores embargaron el castillo y te vendieron como esclavo de galeras."
+                    }
+                },
+                high: {
+                    art: 'deathGold',
+                    ach: 'death_treasury_high',
+                    speaker: { en: "Greedy Nobles", es: "Nobles Codiciosos" },
+                    text: {
+                        en: "With so much gold in the vaults, the nobles poisoned your wine cup to divide the royal fortune.",
+                        es: "Con tanto oro acumulado, los nobles envenenaron tu copa en el banquete para repartirse el tesoro."
+                    }
+                }
+            }
+        };
+
+        const KING_DEATH_EVENTS = [
+            {
+                en: (oldKing, newKing) => `${oldKing} choked on a roasted pheasant bone during a banquet. Long live ${newKing}! You remain as Hand.`,
+                es: (oldKing, newKing) => `El ${oldKing} se atragantó con un hueso de faisán en el banquete. ¡Larga vida al ${newKing}! Continúas como Mano.`
+            },
+            {
+                en: (oldKing, newKing) => `${oldKing} fell from his horse chasing a white stag in the mist. His heir ${newKing} takes the throne.`,
+                es: (oldKing, newKing) => `El ${oldKing} cayó de su caballo persiguiendo un ciervo blanco. Su heredero, el ${newKing}, asume el trono.`
+            },
+            {
+                en: (oldKing, newKing) => `${oldKing} passed away peacefully in his sleep after years of wine. ${newKing} is crowned today.`,
+                es: (oldKing, newKing) => `El ${oldKing} murió dormido tras décadas de vino y fiestas. El ${newKing} es coronado hoy mismo.`
+            }
+        ];
+
+        // --- 9. ESTADO DEL JUEGO Y LÍNEA DE TIEMPO CONTINUA ---
+        let stats = { crown: 50, people: 50, army: 50, treasury: 50 };
+        let lowDangerMemory = { crown: false, people: false, army: false, treasury: false };
+        let postpones = 3;
+        let usedPostponeThisLife = false;
+        let rightStreak = 0;
+        let leftStreak = 0;
+
+        let monthsInPower = 0;
+        let currentWorldYear = 1142;
+        let handStartYear = 1142;
+        let handIndex = 0;
+        let kingIndex = 0;
+        let yearsUnderCurrentKing = 0;
+        let nextKingLifespan = 16;
+
+        let bestMonths = parseInt(localStorage.getItem('kings_hand_best_v6') || '0', 10);
+        let experiencedDeaths = new Set(JSON.parse(localStorage.getItem('kings_hand_deaths_v6') || '[]'));
+
+        let inKingIntro = true;
+        let introStep = 0;
+        let deck = [];
+        let currentCard = null;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let deltaX = 0;
+        let deltaY = 0;
+        let cardLocked = false;
+        let isDeathCardActive = false;
+        let pendingDeathFaction = null;
+        let successionStep = 0;
+
+        // Referencias DOM
+        const cardEl = document.getElementById('active-card');
+        const artEl = document.getElementById('card-art');
+        const dialogueEl = document.getElementById('card-dialogue');
+        const speakerEl = document.getElementById('speaker-name');
+        const bannerEl = document.getElementById('swipe-banner');
+        const bannerTextEl = document.getElementById('swipe-banner-text');
+
+        // --- 10. FORMATEO Y TRADUCCIÓN DE TEXTOS ---
+        function formatTenure(months) {
+            const t = I18N[lang];
+            if (months === 0) return `0 ${t.months} ${t.inPower}`;
+            const yrs = Math.floor(months / 12);
+            const rem = months % 12;
+            if (yrs === 0) return `${rem} ${t.months} ${t.inPower}`;
+            if (rem === 0) return `${yrs} ${yrs === 1 ? t.year : t.years} ${t.inPower}`;
+            return `${yrs} ${yrs === 1 ? t.year : t.years} ${t.andHalf} ${t.inPower}`;
+        }
+
+        function formatBest(months) {
+            const t = I18N[lang];
+            if (months === 0) return `${t.longestTenure}: 0 ${t.months.toUpperCase()}`;
+            const yrs = Math.floor(months / 12);
+            const rem = months % 12;
+            if (yrs === 0) return `${t.longestTenure}: ${rem} ${t.months.toUpperCase()}`;
+            if (rem === 0) return `${t.longestTenure}: ${yrs} ${(yrs === 1 ? t.year : t.years).toUpperCase()}`;
+            return `${t.longestTenure}: ${yrs}Y 6M`;
+        }
+
+        function getHandOrdinal(idx) {
+            const t = I18N[lang];
+            if (idx < t.ordinals.length) return t.ordinals[idx];
+            return t.nthHand(idx + 1);
+        }
+
+        function applyLanguageUI() {
+            const t = I18N[lang];
+            document.getElementById('title-main').textContent = t.titleMain;
+            document.getElementById('title-tap').textContent = t.titleTap;
+            document.getElementById('title-best').textContent = formatBest(bestMonths);
+
+            document.getElementById('fallen-top').textContent = t.theWord;
+            document.getElementById('fallen-mid').textContent = t.handWord;
+            document.getElementById('fallen-bot').textContent = t.hasFallenWord;
+
+            updateLogbookCounters();
+            updateHUD();
+            if (currentCard) renderCardText();
+        }
+
+        function toggleLanguage(e) {
+            if (e) e.stopPropagation();
+            lang = lang === 'en' ? 'es' : 'en';
+            localStorage.setItem('kings_hand_lang_v6', lang);
+            applyLanguageUI();
+        }
+
+        // --- 11. ACTUALIZACIÓN DE INTERFAZ Y MEDIDORES ---
+        function updateHUD() {
+            ['crown', 'people', 'army', 'treasury'].forEach(key => {
+                const val = Math.max(0, Math.min(100, stats[key]));
+                const rect = document.getElementById(`fill-${key}`);
+                rect.setAttribute('y', 100 - val);
+                rect.setAttribute('height', val);
+            });
+
+            for (let i = 1; i <= 3; i++) {
+                const pip = document.getElementById(`pip-${i}`);
+                if (i <= postpones) pip.classList.add('active');
+                else pip.classList.remove('active');
+            }
+
+            document.getElementById('footer-hand-name').textContent = HAND_NAMES[handIndex % HAND_NAMES.length];
+            document.getElementById('footer-tenure').textContent = formatTenure(monthsInPower);
+            document.getElementById('footer-year').textContent = currentWorldYear;
+        }
+
+        function showSkullOnFaction(factionKey) {
+            ['crown', 'people', 'army', 'treasury'].forEach(k => {
+                const skull = document.getElementById(`skull-${k}`);
+                if (k === factionKey) skull.classList.remove('hidden');
+                else skull.classList.add('hidden');
+            });
+        }
+
+        function clearAllSkulls() {
+            ['crown', 'people', 'army', 'treasury'].forEach(k => {
+                document.getElementById(`skull-${k}`).classList.add('hidden');
+            });
+        }
+
+        function showImpactDots(effects) {
+            if (inKingIntro || isDeathCardActive) {
+                clearImpactDots();
+                return;
+            }
+            ['crown', 'people', 'army', 'treasury'].forEach(key => {
+                const dot = document.getElementById(`dot-${key}`);
+                dot.className = 'impact-dot';
+                const delta = effects && effects[key] ? Math.abs(effects[key]) : 0;
+                if (delta >= 20) dot.classList.add('large');
+                else if (delta > 0) dot.classList.add('small');
+            });
+        }
+
+        function clearImpactDots() {
+            ['crown', 'people', 'army', 'treasury'].forEach(key => {
+                document.getElementById(`dot-${key}`).className = 'impact-dot';
+            });
+        }
+
+        // --- 12. BARAJADO Y REPARTO DE CARTAS ---
+        function refillDeck() {
+            deck = [...DECK_DATA];
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        function renderCardText() {
+            if (!currentCard) return;
+            dialogueEl.textContent = currentCard.text[lang];
+            if (currentCard.art === 'king' && !currentCard.isKingSuccession) {
+                speakerEl.textContent = getCurrentKingName();
+            } else {
+                speakerEl.textContent = currentCard.speaker[lang];
+            }
+        }
+
+        function triggerDealAnimation() {
+            cardEl.classList.remove('card-deal-anim');
+            void cardEl.offsetWidth;
+            cardEl.classList.add('card-deal-anim');
+            setTimeout(() => {
+                cardEl.classList.remove('card-deal-anim');
+            }, 290);
+        }
+
+        function drawCard() {
+            cardLocked = false;
+            deltaX = 0;
+            deltaY = 0;
+            cardEl.style.transition = 'none';
+            cardEl.style.transform = 'translate3d(0px, 0px, 0px) rotate(0deg)';
+            bannerEl.style.opacity = '0';
+            clearImpactDots();
+
+            if (inKingIntro) {
+                if (introStep < KING_INTRO.length) {
+                    currentCard = KING_INTRO[introStep];
+                } else {
+                    inKingIntro = false;
+                    stats = { crown: 50, people: 50, army: 50, treasury: 50 };
+                    postpones = 3;
+                    monthsInPower = 0;
+                    updateHUD();
+                    refillDeck();
+                    currentCard = deck.pop();
+                }
+            } else {
+                if (deck.length === 0) refillDeck();
+                currentCard = deck.pop();
+            }
+
+            artEl.innerHTML = ART[currentCard.art] || ART.king;
+            renderCardText();
+            triggerDealAnimation();
+        }
+
+        function spawnKingSuccessionCard() {
+            const oldKingEn = KING_SUCCESSION_NAMES[kingIndex % KING_SUCCESSION_NAMES.length].en;
+            const oldKingEs = KING_SUCCESSION_NAMES[kingIndex % KING_SUCCESSION_NAMES.length].es;
+
+            kingIndex++;
+            yearsUnderCurrentKing = 0;
+            nextKingLifespan = 15 + Math.floor(Math.random() * 6);
+
+            unlockAchievement("king_raul_dies");
+            if (kingIndex >= 2) unlockAchievement("king_3");
+            if (kingIndex >= 4) unlockAchievement("king_5");
+
+            const newKingEn = KING_SUCCESSION_NAMES[kingIndex % KING_SUCCESSION_NAMES.length].en;
+            const newKingEs = KING_SUCCESSION_NAMES[kingIndex % KING_SUCCESSION_NAMES.length].es;
+
+            const ev = KING_DEATH_EVENTS[Math.floor(Math.random() * KING_DEATH_EVENTS.length)];
+
+            currentCard = {
+                isKingSuccession: true,
+                art: 'royalTomb',
+                speaker: { en: newKingEn, es: newKingEs },
+                text: {
+                    en: ev.en(oldKingEn, newKingEn),
+                    es: ev.es(oldKingEs, newKingEs)
+                },
+                left: { label: { en: "Long live the King", es: "Larga vida al Rey" }, effects: { crown: 10 } },
+                right: { label: { en: "Serve the new Crown", es: "Servir a la Corona" }, effects: { crown: 10 } }
+            };
+
+            cardLocked = false;
+            deltaX = 0;
+            deltaY = 0;
+            cardEl.style.transition = 'none';
+            cardEl.style.transform = 'translate3d(0px, 0px, 0px) rotate(0deg)';
+            bannerEl.style.opacity = '0';
+            clearImpactDots();
+
+            artEl.innerHTML = ART.royalTomb;
+            renderCardText();
+            triggerDealAnimation();
+        }
+
+        function spawnDeathCard(faction, bound) {
+            isDeathCardActive = true;
+            pendingDeathFaction = faction;
+            playFeedbackSound('death');
+            showSkullOnFaction(faction);
+
+            const reason = DEATH_REASONS[faction][bound];
+            unlockAchievement(reason.ach);
+
+            experiencedDeaths.add(reason.ach);
+            localStorage.setItem('kings_hand_deaths_v6', JSON.stringify(Array.from(experiencedDeaths)));
+            if (experiencedDeaths.size >= 8) unlockAchievement("all_deaths");
+
+            if (monthsInPower < 24) unlockAchievement("short_reign");
+
+            currentCard = {
+                art: reason.art,
+                speaker: reason.speaker,
+                text: reason.text,
+                left: { label: I18N[lang].continueBanner, effects: {} },
+                right: { label: I18N[lang].continueBanner, effects: {} }
+            };
+
+            cardLocked = false;
+            deltaX = 0;
+            deltaY = 0;
+            cardEl.style.transition = 'none';
+            cardEl.style.transform = 'translate3d(0px, 0px, 0px) rotate(0deg)';
+            bannerEl.style.opacity = '0';
+            clearImpactDots();
+
+            artEl.innerHTML = ART[currentCard.art] || ART.deathExecution;
+            renderCardText();
+            triggerDealAnimation();
+        }
+
+        // --- 13. EVALUACIÓN DE LOGROS TRAS CADA DECISIÓN ---
+        function evaluateTurnAchievements(choiceObj) {
+            if (choiceObj && choiceObj.ach) {
+                unlockAchievement(choiceObj.ach);
+            }
+
+            const years = monthsInPower / 12;
+            if (years >= 5) unlockAchievement("survive_5y");
+            if (years >= 10) {
+                unlockAchievement("survive_10y");
+                if (!usedPostponeThisLife) unlockAchievement("no_postpone_10y");
+            }
+            if (years >= 15) unlockAchievement("survive_15y");
+            if (years >= 20) {
+                unlockAchievement("survive_20y");
+                if (!usedPostponeThisLife) unlockAchievement("no_postpone_20y");
+            }
+            if (years >= 25) unlockAchievement("survive_25y");
+            if (years >= 30) unlockAchievement("survive_30y");
+            if (years >= 40) unlockAchievement("survive_40y");
+            if (years >= 50) unlockAchievement("survive_50y");
+
+            if (currentWorldYear >= 1200) unlockAchievement("year_1200");
+            if (currentWorldYear >= 1250) unlockAchievement("year_1250");
+
+            const vals = Object.values(stats);
+            if (years >= 5 && vals.every(v => v >= 45 && v <= 55)) {
+                unlockAchievement("perfect_harmony");
+            }
+
+            ['crown', 'people', 'army', 'treasury'].forEach(k => {
+                const v = stats[k];
+                if (v > 0 && v <= 5) unlockAchievement("brink_low");
+                if (v < 100 && v >= 95) unlockAchievement("brink_high");
+                if (v > 0 && v < 10) lowDangerMemory[k] = true;
+                if (lowDangerMemory[k] && v >= 50) {
+                    unlockAchievement("comeback_kid");
+                    lowDangerMemory[k] = false;
+                }
+            });
+        }
+
+        // --- 14. RESOLUCIÓN DE DECISIONES ---
+        function commitChoice(direction) {
+            if (cardLocked || !currentCard) return;
+            cardLocked = true;
+
+            if (isDeathCardActive) {
+                playFeedbackSound('swipe');
+                const exitX = direction === 'left' ? -440 : 440;
+                const exitRot = direction === 'left' ? -22 : 22;
+                cardEl.style.transition = 'transform 0.26s cubic-bezier(0.22, 1, 0.36, 1)';
+                cardEl.style.transform = `translate3d(${exitX}px, 20px, 0px) rotate(${exitRot}deg)`;
+                setTimeout(() => openSuccessionFlow(), 250);
+                return;
+            }
+
+            // Gesto hacia arriba: Posponer
+            if (direction === 'up') {
+                if (inKingIntro || currentCard.isKingSuccession || postpones <= 0) {
+                    snapBack();
+                    cardLocked = false;
+                    return;
+                }
+                postpones--;
+                usedPostponeThisLife = true;
+                totalPostponesEver++;
+                localStorage.setItem('kings_hand_postpones_v6', String(totalPostponesEver));
+
+                if (postpones === 0) unlockAchievement("postpone_empty");
+                if (totalPostponesEver >= 10) unlockAchievement("postpone_10");
+                if (totalPostponesEver >= 25) unlockAchievement("postpone_25");
+
+                playFeedbackSound('postpone');
+                deck.unshift(currentCard);
+                updateHUD();
+
+                cardEl.style.transition = 'transform 0.26s cubic-bezier(0.22, 1, 0.36, 1)';
+                cardEl.style.transform = 'translate3d(0px, -460px, 0px) scale(0.88)';
+                setTimeout(drawCard, 250);
+                return;
+            }
+
+            playFeedbackSound('swipe');
+            const choice = direction === 'left' ? currentCard.left : currentCard.right;
+
+            if (inKingIntro) {
+                introStep++;
+            } else {
+                if (direction === 'right') {
+                    rightStreak++;
+                    leftStreak = 0;
+                    if (rightStreak >= 8) unlockAchievement("Yes_man");
+                } else {
+                    leftStreak++;
+                    rightStreak = 0;
+                    if (leftStreak >= 8) unlockAchievement("iron_veto");
+                }
+
+                if (choice.effects) {
+                    Object.keys(choice.effects).forEach(k => {
+                        stats[k] = Math.max(0, Math.min(100, stats[k] + choice.effects[k]));
+                    });
+                }
+                if (choice.grantPostpone) {
+                    postpones = Math.min(3, postpones + choice.grantPostpone);
+                    unlockAchievement("postpone_refill");
+                }
+
+                monthsInPower += 6;
+                if (monthsInPower % 12 === 0) {
+                    currentWorldYear++;
+                    yearsUnderCurrentKing++;
+                }
+
+                if (monthsInPower > bestMonths) {
+                    bestMonths = monthsInPower;
+                    localStorage.setItem('kings_hand_best_v6', String(bestMonths));
+                }
+            }
+
+            updateHUD();
+
+            const exitX = direction === 'left' ? -440 : 440;
+            const exitRot = direction === 'left' ? -22 : 22;
+            cardEl.style.transition = 'transform 0.26s cubic-bezier(0.22, 1, 0.36, 1)';
+            cardEl.style.transform = `translate3d(${exitX}px, 20px, 0px) rotate(${exitRot}deg)`;
+
+            setTimeout(() => {
+                if (!inKingIntro) {
+                    for (const key of ['crown', 'people', 'army', 'treasury']) {
+                        if (stats[key] <= 0) {
+                            spawnDeathCard(key, 'low');
+                            return;
+                        }
+                        if (stats[key] >= 100) {
+                            spawnDeathCard(key, 'high');
+                            return;
+                        }
+                    }
+
+                    evaluateTurnAchievements(choice);
+
+                    if (yearsUnderCurrentKing >= nextKingLifespan) {
+                        spawnKingSuccessionCard();
+                        return;
+                    }
+                }
+                drawCard();
+            }, 250);
+        }
+
+        function snapBack() {
+            clearImpactDots();
+            bannerEl.style.opacity = '0';
+            cardEl.style.transition = 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)';
+            cardEl.style.transform = 'translate3d(0px, 0px, 0px) rotate(0deg)';
+        }
+
+        // --- 15. PANTALLA DE SUCESIÓN CON LÍNEA DE TIEMPO ANIMADA ---
+        function openSuccessionFlow() {
+            const screen = document.getElementById('succession-screen');
+            const phase1 = document.getElementById('succ-phase-1');
+            const phase2 = document.getElementById('succ-phase-2');
+
+            const deadHandName = HAND_NAMES[handIndex % HAND_NAMES.length];
+            document.getElementById('fallen-name').textContent = deadHandName;
+            document.getElementById('fallen-years').textContent = `${handStartYear} - ${currentWorldYear}`;
+
+            successionStep = 1;
+            phase1.classList.remove('hidden');
+            phase2.classList.add('hidden');
+            screen.classList.remove('hidden');
+        }
+
+        function advanceSuccessionFlow() {
+            if (successionStep === 1) {
+                playFeedbackSound('swipe');
+                successionStep = 2;
+
+                const prevDeathYear = currentWorldYear;
+                const livedYears = Math.max(1, prevDeathYear - handStartYear);
+                currentWorldYear += 1;
+                handStartYear = currentWorldYear;
+                handIndex++;
+
+                if (handIndex + 1 >= 3) unlockAchievement("hand_3");
+                if (handIndex + 1 >= 5) unlockAchievement("hand_5");
+                if (handIndex + 1 >= 10) unlockAchievement("hand_10");
+
+                const nextHandName = HAND_NAMES[handIndex % HAND_NAMES.length];
+                const kingName = getCurrentKingName();
+                const t = I18N[lang];
+
+                const yearEl = document.getElementById('timeline-new-year');
+                yearEl.textContent = prevDeathYear;
+                document.getElementById('timeline-successor-name').textContent = nextHandName;
+                document.getElementById('timeline-successor-ordinal').textContent = `${getHandOrdinal(handIndex)} • ${t.underKing} ${kingName}`;
+                document.getElementById('timeline-king-note').textContent = t.kingAppointed(kingName);
+
+                const barEl = document.getElementById('timeline-lived-bar');
+                const dotEl = document.getElementById('timeline-red-dot');
+                barEl.style.width = '0%';
+                dotEl.style.transform = 'scale(0)';
+
+                document.getElementById('succ-phase-1').classList.add('hidden');
+                document.getElementById('succ-phase-2').classList.remove('hidden');
+
+                const targetWidth = Math.min(62, Math.max(16, livedYears * 4));
+                setTimeout(() => {
+                    barEl.style.width = `${targetWidth}%`;
+                    setTimeout(() => {
+                        dotEl.style.transform = 'scale(1)';
+                        yearEl.textContent = currentWorldYear;
+                    }, 550);
+                }, 80);
+
+            } else if (successionStep === 2) {
+                playFeedbackSound('swipe');
+                successionStep = 0;
+                document.getElementById('succession-screen').classList.add('hidden');
+                startNextHandTenure();
+            }
+        }
+
+        function startNextHandTenure() {
+            isDeathCardActive = false;
+            pendingDeathFaction = null;
+            clearAllSkulls();
+
+            stats = { crown: 50, people: 50, army: 50, treasury: 50 };
+            lowDangerMemory = { crown: false, people: false, army: false, treasury: false };
+            postpones = 3;
+            usedPostponeThisLife = false;
+            rightStreak = 0;
+            leftStreak = 0;
+            monthsInPower = 0;
+            inKingIntro = false;
+
+            updateHUD();
+            refillDeck();
+            drawCard();
+        }
+
+        // --- 16. EVENTOS DE ARRASTRE TÁCTIL Y MOUSE ---
+        function onPointerDown(x, y) {
+            if (cardLocked) return;
+            isDragging = true;
+            startX = x;
+            startY = y;
+            cardEl.style.transition = 'none';
+        }
+
+        function onPointerMove(x, y) {
+            if (!isDragging || cardLocked || !currentCard) return;
+            deltaX = x - startX;
+            deltaY = y - startY;
+
+            const rot = deltaX * 0.065;
+            cardEl.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0px) rotate(${rot}deg)`;
+
+            if (!inKingIntro && !isDeathCardActive && !currentCard.isKingSuccession && deltaY < -65 && Math.abs(deltaY) > Math.abs(deltaX) && postpones > 0) {
+                bannerTextEl.textContent = `↑ ${I18N[lang].postponeBanner}`;
+                bannerEl.style.opacity = '1';
+                clearImpactDots();
+            } else if (deltaX > 32) {
+                bannerTextEl.textContent = isDeathCardActive
+                    ? currentCard.right.label
+                    : `${currentCard.right.label[lang]} →`;
+                bannerEl.style.opacity = Math.min(1, (deltaX - 32) / 55);
+                showImpactDots(currentCard.right.effects);
+            } else if (deltaX < -32) {
+                bannerTextEl.textContent = isDeathCardActive
+                    ? currentCard.left.label
+                    : `← ${currentCard.left.label[lang]}`;
+                bannerEl.style.opacity = Math.min(1, (Math.abs(deltaX) - 32) / 55);
+                showImpactDots(currentCard.left.effects);
+            } else {
+                bannerEl.style.opacity = '0';
+                clearImpactDots();
+            }
+        }
+
+        function onPointerUp() {
+            if (!isDragging || cardLocked) return;
+            isDragging = false;
+
+            if (!inKingIntro && !isDeathCardActive && !currentCard.isKingSuccession && deltaY < -95 && Math.abs(deltaY) > Math.abs(deltaX) && postpones > 0) {
+                commitChoice('up');
+            } else if (deltaX > 85) {
+                commitChoice('right');
+            } else if (deltaX < -85) {
+                commitChoice('left');
+            } else {
+                snapBack();
+            }
+        }
+
+        cardEl.addEventListener('touchstart', e => {
+            if (e.touches.length > 0) onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+
+        window.addEventListener('touchmove', e => {
+            if (isDragging && e.touches.length > 0) onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+
+        window.addEventListener('touchend', onPointerUp);
+
+        cardEl.addEventListener('mousedown', e => onPointerDown(e.clientX, e.clientY));
+        window.addEventListener('mousemove', e => onPointerMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', onPointerUp);
+
+        // --- 17. INICIO DEL JUEGO Y EVENTOS DE INTERFAZ ---
+        function startGameFromCover() {
+            playFeedbackSound('swipe');
+            const titleScreen = document.getElementById('title-screen');
+            titleScreen.classList.add('opacity-0', 'pointer-events-none');
+
+            isDeathCardActive = false;
+            clearAllSkulls();
+            stats = { crown: 50, people: 50, army: 50, treasury: 50 };
+            lowDangerMemory = { crown: false, people: false, army: false, treasury: false };
+            postpones = 3;
+            usedPostponeThisLife = false;
+            rightStreak = 0;
+            leftStreak = 0;
+            monthsInPower = 0;
+            currentWorldYear = 1142;
+            handStartYear = 1142;
+            handIndex = 0;
+            kingIndex = 0;
+            yearsUnderCurrentKing = 0;
+            inKingIntro = true;
+            introStep = 0;
+
+            updateHUD();
+            drawCard();
+        }
+
+        document.getElementById('lang-btn-title').addEventListener('click', toggleLanguage);
+        document.getElementById('lang-btn-succession').addEventListener('click', toggleLanguage);
+
+        document.getElementById('logbook-btn-title').addEventListener('click', openLogbookModal);
+        document.getElementById('logbook-btn-succession').addEventListener('click', openLogbookModal);
+        document.getElementById('close-logbook-btn').addEventListener('click', closeLogbookModal);
+        document.getElementById('close-logbook-bottom').addEventListener('click', closeLogbookModal);
+
+        document.getElementById('start-tap-area').addEventListener('click', startGameFromCover);
+        document.getElementById('succession-screen').addEventListener('click', advanceSuccessionFlow);
+
+        window.onload = function () {
+            applyLanguageUI();
+        };
+    </script>
+</body>
+</html>
